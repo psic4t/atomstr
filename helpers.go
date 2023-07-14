@@ -36,8 +36,6 @@ func convertTimeString(itemTime string) *time.Time {
 func checkMaxAge(itemTime *time.Time, maxAgeHours time.Duration) bool {
 	maxAge := time.Now().Add(-fetchInterval)
 
-	//postTime := convertTimeString(itemTime)
-
 	if itemTime.After(maxAge) {
 		return true
 	}

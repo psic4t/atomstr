@@ -69,6 +69,11 @@ func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item) {
 	p := bluemonday.StripTagsPolicy() // initialize html sanitizer
 
 	//fmt.Println(feedPost.PublishedParsed)
+
+	// ditch it, if no timestamp
+	if feedPost.PublishedParsed == nil {
+		return
+	}
 	// if time right, then push
 	if checkMaxAge(feedPost.PublishedParsed, fetchInterval) {
 		feedText := feedPost.Title + "\n\n" + p.Sanitize(feedPost.Description)
