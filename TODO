@@ -5,3 +5,4 @@
 * categories as tags
 * longer term: TikTok support
 * fix NIP-05 for URLs containing @.
+* fix entries with no publishedParsed date
