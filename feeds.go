@@ -100,7 +100,7 @@ func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item) {
 func (a *Atomstr) dbWriteFeed(feedItem *feedStruct) bool {
 	_, err := a.db.Exec(`insert into feeds (pub, sec, url) values(?, ?, ?)`, feedItem.Pub, feedItem.Sec, feedItem.Url)
 	if err != nil {
-		fmt.Println("[ERROR] Can't add feed!")
+		log.Println("[ERROR] Can't add feed!")
 		log.Fatal(err)
 	}
 	nip19Pub, _ := nip19.EncodePublicKey(feedItem.Pub)

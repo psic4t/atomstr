@@ -15,8 +15,9 @@ func (a *Atomstr) webMain(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("templates/index.tmpl"))
 	feeds := a.dbGetAllFeeds()
 	data := webIndex{
-		Relays: relaysToPublishTo,
-		Feeds:  *feeds,
+		Relays:  relaysToPublishTo,
+		Feeds:   *feeds,
+		Version: atomstrversion,
 	}
 	tmpl.Execute(w, data)
 }
