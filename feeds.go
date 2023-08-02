@@ -67,6 +67,9 @@ func processFeedUrl(ch chan feedStruct, wg *sync.WaitGroup) {
 
 func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item) {
 	p := bluemonday.StripTagsPolicy() // initialize html sanitizer
+	p.AllowStandardURLs()
+	p.AllowAttrs("src").OnElements("img")
+	p.AllowDataURIImages()
 
 	//fmt.Println(feedPost.PublishedParsed)
 
@@ -77,6 +80,8 @@ func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item) {
 	// if time right, then push
 	if checkMaxAge(feedPost.PublishedParsed, fetchInterval) {
 		feedText := feedPost.Title + "\n\n" + p.Sanitize(feedPost.Description)
+		//fmt.Println(feedPost.Title)
+		//fmt.Println(feedPost.Description)
 		//feedText := feedPost.Title + "\n\n" + feedPost.Description
 		if feedPost.Link != "" {
 			feedText = feedText + "\n\n" + feedPost.Link
@@ -170,7 +175,11 @@ func (a *Atomstr) addSource(feedUrl string) (*feedStruct, error) {
 
 	a.dbWriteFeed(feedItem)
 	nostrUpdateFeedMetadata(feedItem)
-
+	/*
+		for i := range feed.Items {
+			processFeedPost(feedItem, feed.Items[i])
+		}
+	*/
 	return feedItem, err
 }
 func (a *Atomstr) deleteSource(feedUrl string) bool {

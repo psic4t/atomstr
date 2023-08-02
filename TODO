@@ -1,8 +1,6 @@
 # mucho mucho
 
-* error handling!
-* formatting
-* categories as tags
 * longer term: TikTok support
-* fix NIP-05 for URLs containing @.
 * fix entries with no publishedParsed date
+* get old posts on initial sync
+* fix images in Twitter posts
