@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"regexp"
 	"sync"
 	"time"
 
@@ -79,7 +80,13 @@ func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.D
 	}
 	// if time right, then push
 	if checkMaxAge(feedPost.PublishedParsed, interval) {
-		feedText := feedPost.Title + "\n\n" + p.Sanitize(feedPost.Description)
+		var feedText string
+		var re = regexp.MustCompile(`nitter|telegram`)
+		if re.MatchString(feedPost.Link) { // fix duplicated title in nitter/telegram
+			feedText = p.Sanitize(feedPost.Description)
+		} else {
+			feedText = feedPost.Title + "\n\n" + p.Sanitize(feedPost.Description)
+		}
 		//fmt.Println(feedPost.Title)
 		//fmt.Println(feedPost.Description)
 		//feedText := feedPost.Title + "\n\n" + feedPost.Description
