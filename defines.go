@@ -5,10 +5,13 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/mmcdole/gofeed"
 )
 
 var fetchInterval, _ = time.ParseDuration(getEnv("FETCH_INTERVAL", "15m"))
 var metadataInterval, _ = time.ParseDuration(getEnv("METADATA_INTERVAL", "12h"))
+var historyInterval, _ = time.ParseDuration(getEnv("HISTORY_INTERVAL", "72h"))
 var logLevel = getEnv("LOG_LEVEL", "DEBUG")
 var webserverPort = getEnv("WEBSERVER_PORT", "8061")
 var nip05Domain = getEnv("NIP05_DOMAIN", "atomstr.data.haus")
@@ -40,6 +43,7 @@ type feedStruct struct {
 	Description string
 	Link        string
 	Image       string
+	Posts       []*gofeed.Item
 }
 
 type webIndex struct {

@@ -57,7 +57,7 @@ func processFeedUrl(ch chan feedStruct, wg *sync.WaitGroup) {
 			//feedItem.Image = feed.Image
 
 			for i := range feed.Items {
-				processFeedPost(feedItem, feed.Items[i])
+				processFeedPost(feedItem, feed.Items[i], fetchInterval)
 			}
 			log.Println("[DEBUG] Finished updating feed ", feedItem.Url)
 		}
@@ -65,7 +65,7 @@ func processFeedUrl(ch chan feedStruct, wg *sync.WaitGroup) {
 	wg.Done()
 }
 
-func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item) {
+func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.Duration) {
 	p := bluemonday.StripTagsPolicy() // initialize html sanitizer
 	p.AllowStandardURLs()
 	p.AllowAttrs("src").OnElements("img")
@@ -78,7 +78,7 @@ func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item) {
 		return
 	}
 	// if time right, then push
-	if checkMaxAge(feedPost.PublishedParsed, fetchInterval) {
+	if checkMaxAge(feedPost.PublishedParsed, interval) {
 		feedText := feedPost.Title + "\n\n" + p.Sanitize(feedPost.Description)
 		//fmt.Println(feedPost.Title)
 		//fmt.Println(feedPost.Description)
@@ -148,6 +148,7 @@ func checkValidFeedSource(feedUrl string) (*feedStruct, error) {
 	} else {
 		feedItem.Image = defaultFeedImage
 	}
+	feedItem.Posts = feed.Items
 
 	return &feedItem, err
 }
@@ -175,11 +176,13 @@ func (a *Atomstr) addSource(feedUrl string) (*feedStruct, error) {
 
 	a.dbWriteFeed(feedItem)
 	nostrUpdateFeedMetadata(feedItem)
-	/*
-		for i := range feed.Items {
-			processFeedPost(feedItem, feed.Items[i])
-		}
-	*/
+
+	log.Println("[INFO] Parsing post history of new feed")
+	for i := range feedItem.Posts {
+		processFeedPost(*feedItem, feedItem.Posts[i], historyInterval)
+	}
+	log.Println("[INFO] Finished parsing post history of new feed")
+
 	return feedItem, err
 }
 func (a *Atomstr) deleteSource(feedUrl string) bool {
@@ -189,13 +192,13 @@ func (a *Atomstr) deleteSource(feedUrl string) bool {
 		sqlStatement := `DELETE FROM feeds WHERE url=$1;`
 		_, err := a.db.Exec(sqlStatement, feedUrl)
 		if err != nil {
-			log.Println("[WARN] Can't remove Feed")
+			log.Println("[WARN] Can't remove feed")
 			log.Fatal(err)
 		}
-		log.Println("[INFO] Feed removed")
+		log.Println("[INFO] feed removed")
 		return true
 	} else {
-		log.Println("[WARN] Feed not found")
+		log.Println("[WARN] feed not found")
 		return false
 	}
 }

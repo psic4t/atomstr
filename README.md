@@ -30,11 +30,12 @@ The following variables are available:
 - `DB_PATH`, "./atomstr.db"
 - `FETCH_INTERVAL` refresh interval for feeds, default "15m"
 - `METADATA_INTERVAL` refresh interval for feed name, icon, etc, default "2h"
+- `HISTORY_INTERVAL` history interval for feed initial sync, default "72h"
 - `LOG_LEVEL`, "INFO"
 - `WEBSERVER_PORT`, "8061"
 - `NIP05_DOMAIN` webserver domain, default  "atomstr.data.haus"
 - `MAX_WORKERS` max work in paralel. Default "5"
-- `RELAYS_TO_PUBLISH_TO` to which relays this server posts to, add more comma separated. Default  "wss://nostr.data.haus"
+- `RELAYS_TO_PUBLISH_TO` to which relays this server posts to, add more comma separated. Default "wss://nostr.data.haus"
 - `DEFAULT_FEED_IMAGE` if no feed image is found, use this. Default "https://void.cat/d/NDrSDe4QMx9jh6bD9LJwcK"
 
 ## CLI Usage
