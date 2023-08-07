@@ -88,7 +88,7 @@ func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.D
 			feedText = feedPost.Title + "\n\n" + p.Sanitize(feedPost.Description)
 		}
 
-		var regImg = regexp.MustCompile(`\<img.src=\"(http.*)\"\/\>`) // allow inline images
+		var regImg = regexp.MustCompile(`\<img.src=\"(http.*\.(jpg|png|gif)).*\/\>`) // allow inline images
 		feedText = regImg.ReplaceAllString(feedText, `$1`)
 		//fmt.Println(feedPost.Title)
 		//fmt.Println(feedPost.Description)
