@@ -12,7 +12,7 @@ Although self hosting is preferable (it always is), there's a test instance at [
 - Automatic NIP-05 verification of profiles
 - Parallel scraping of feeds
 - Easy installation
-
+- NIP-48 support
 
 ## Installation / Configuration
 
