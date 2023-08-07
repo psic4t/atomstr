@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/url"
 	"regexp"
 	"sync"
 	"time"
@@ -67,15 +68,14 @@ func processFeedUrl(ch chan feedStruct, wg *sync.WaitGroup) {
 }
 
 func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.Duration) {
-	p := bluemonday.StripTagsPolicy() // initialize html sanitizer
-	p.AllowStandardURLs()
-	p.AllowAttrs("src").OnElements("img")
-	p.AllowDataURIImages()
+	p := bluemonday.StrictPolicy() // initialize html sanitizer
+	p.AllowImages()
 
 	//fmt.Println(feedPost.PublishedParsed)
 
 	// ditch it, if no timestamp
 	if feedPost.PublishedParsed == nil {
+		log.Println("[WARN] Can't read PublishedParsed date of post from", feedItem.Url)
 		return
 	}
 	// if time right, then push
@@ -95,11 +95,14 @@ func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.D
 		}
 		//postTime := convertTimeString(feedPost.PublishedParsed)
 
+		var tags nostr.Tags
+		tags = append(tags, nostr.Tag{"proxy", feedItem.Url + `#` + url.QueryEscape(feedPost.Link), "rss"})
+
 		ev := nostr.Event{
 			PubKey:    feedItem.Pub,
 			CreatedAt: nostr.Timestamp(feedPost.PublishedParsed.Unix()),
 			Kind:      nostr.KindTextNote,
-			Tags:      nil,
+			Tags:      tags,
 			Content:   feedText,
 		}
 
