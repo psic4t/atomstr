@@ -103,6 +103,8 @@ table {
 	width: 100%;
 }
 
+tr:hover {background-color: #f2f2f2;}
+
 th {
 	background-color: #ddd;
 }
