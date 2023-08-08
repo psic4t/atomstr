@@ -90,15 +90,28 @@ func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.D
 
 		var regImg = regexp.MustCompile(`\<img.src=\"(http.*\.(jpg|png|gif)).*\/\>`) // allow inline images
 		feedText = regImg.ReplaceAllString(feedText, "$1\n")
-		//fmt.Println(feedPost.Title)
-		//fmt.Println(feedPost.Description)
-		//feedText := feedPost.Title + "\n\n" + feedPost.Description
+
+		var regLink = regexp.MustCompile(`\<a.href=\"(https.*)\"\ .*\<\/a\>`) // allow inline links
+		feedText = regLink.ReplaceAllString(feedText, "$1\n")
+
+		if feedPost.Enclosures != nil { // allow enclosure images/links
+			for _, enclosure := range feedPost.Enclosures {
+				feedText = feedText + "\n\n" + enclosure.URL
+			}
+		}
+
 		if feedPost.Link != "" {
 			feedText = feedText + "\n\n" + feedPost.Link
 		}
-		//postTime := convertTimeString(feedPost.PublishedParsed)
 
 		var tags nostr.Tags
+
+		if feedPost.Categories != nil { // use post categories as tags
+			for _, category := range feedPost.Categories {
+				tags = append(tags, nostr.Tag{"t", category})
+			}
+		}
+
 		tags = append(tags, nostr.Tag{"proxy", feedItem.Url + `#` + url.QueryEscape(feedPost.Link), "rss"})
 
 		ev := nostr.Event{

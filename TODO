@@ -1,8 +1,4 @@
 # mucho mucho
 
 * fix entries with no publishedParsed date
-* fix images in Twitter posts
-* fix doubled text in title + description
-* fix inline links
-* add containments 
-* NIP-48 support
+* regression: long time on adding feed due to history fetching
