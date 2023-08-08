@@ -20,7 +20,7 @@ var r = getEnv("RELAYS_TO_PUBLISH_TO", "wss://nostr.data.haus, wss://spore.ws, w
 var relaysToPublishTo = strings.Split(r, ",")
 var defaultFeedImage = getEnv("DEFAULT_FEED_IMAGE", "https://void.cat/d/NDrSDe4QMx9jh6bD9LJwcK")
 var dbPath = getEnv("DB_PATH", "./atomstr.db")
-var atomstrversion string = "0.8.0"
+var atomstrversion string = "0.9.0"
 
 type Atomstr struct {
 	db *sql.DB
