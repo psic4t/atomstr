@@ -32,7 +32,9 @@ func nostrUpdateFeedMetadata(feedItem *feedStruct) {
 	ev.Sign(feedItem.Sec)
 	log.Println("[DEBUG] Updating feed metadata for", feedItem.Title)
 
-	nostrPostItem(ev)
+	if noPub == false {
+		nostrPostItem(ev)
+	}
 }
 
 func (a *Atomstr) processFeedMetadata(ch chan feedStruct, wg *sync.WaitGroup) {

@@ -45,6 +45,7 @@ func (a *Atomstr) webNip05(w http.ResponseWriter, r *http.Request) {
 	name := r.URL.Query().Get("name")
 	name, _ = url.QueryUnescape(name)
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	var response []byte
 	if name != "" && name != "_" {
@@ -54,7 +55,9 @@ func (a *Atomstr) webNip05(w http.ResponseWriter, r *http.Request) {
 			Names: map[string]string{
 				name: feedItem.Pub,
 			},
-			Relays: nil,
+			Relays: map[string][]string{
+				feedItem.Pub: relaysToPublishTo,
+			},
 		}
 		response, _ = json.Marshal(nip05WellKnownResponse)
 		_, _ = w.Write(response)

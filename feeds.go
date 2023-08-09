@@ -126,7 +126,9 @@ func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.D
 
 		ev.Sign(feedItem.Sec)
 
-		nostrPostItem(ev)
+		if noPub == false {
+			nostrPostItem(ev)
+		}
 	}
 }
 
@@ -203,7 +205,9 @@ func (a *Atomstr) addSource(feedUrl string) (*feedStruct, error) {
 	//fmt.Println(feedItem)
 
 	a.dbWriteFeed(feedItem)
-	nostrUpdateFeedMetadata(feedItem)
+	if noPub == false {
+		nostrUpdateFeedMetadata(feedItem)
+	}
 
 	log.Println("[INFO] Parsing post history of new feed")
 	for i := range feedItem.Posts {
