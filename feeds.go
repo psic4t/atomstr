@@ -70,6 +70,8 @@ func processFeedUrl(ch chan feedStruct, wg *sync.WaitGroup) {
 func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.Duration) {
 	p := bluemonday.StrictPolicy() // initialize html sanitizer
 	p.AllowImages()
+	p.AllowStandardURLs()
+	p.AllowAttrs("href").OnElements("a")
 
 	//fmt.Println(feedPost.PublishedParsed)
 
@@ -91,7 +93,7 @@ func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.D
 		var regImg = regexp.MustCompile(`\<img.src=\"(http.*\.(jpg|png|gif)).*\/\>`) // allow inline images
 		feedText = regImg.ReplaceAllString(feedText, "$1\n")
 
-		var regLink = regexp.MustCompile(`\<a.href=\"(https.*)\"\ .*\<\/a\>`) // allow inline links
+		var regLink = regexp.MustCompile(`\<a.href=\"(https.*?)\"\ .*\<\/a\>`) // allow inline links
 		feedText = regLink.ReplaceAllString(feedText, "$1\n")
 
 		if feedPost.Enclosures != nil { // allow enclosure images/links
