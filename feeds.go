@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"html"
 	"log"
 	"net/url"
 	"regexp"
@@ -95,6 +96,8 @@ func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.D
 
 		var regLink = regexp.MustCompile(`\<a.href=\"(https.*?)\"\ .*\<\/a\>`) // allow inline links
 		feedText = regLink.ReplaceAllString(feedText, "$1\n")
+
+		feedText = html.UnescapeString(feedText) // decode html strings
 
 		if feedPost.Enclosures != nil { // allow enclosure images/links
 			for _, enclosure := range feedPost.Enclosures {
