@@ -109,6 +109,10 @@ th {
 	background-color: #ddd;
 }
 
+.opener th {
+	width: 14em;
+}
+
 .input {
 	width: 80%;
 }
