@@ -109,7 +109,7 @@ th {
 	background-color: #ddd;
 }
 
-.opener th {
+th.opener {
 	width: 14em;
 }
 
