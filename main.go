@@ -67,6 +67,7 @@ func main() {
 		log.Println("[INFO] atomstr version ", atomstrversion)
 	} else {
 		log.Println("[INFO] Starting atomstr v", atomstrversion)
+		//slog.Info("Starting atomstr v", atomstrversion)
 		go a.webserver()
 
 		// first run

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/nbd-wtf/go-nostr"
 )
@@ -90,4 +91,6 @@ func nostrPostItem(ev nostr.Event) {
 
 		log.Printf("[DEBUG] Event published to %s\n", url)
 	}
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
 }
