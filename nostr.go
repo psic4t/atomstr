@@ -75,8 +75,9 @@ func (a *Atomstr) ALTnostrUpdateAllFeedsMetadata() {
 }
 
 func nostrPostItem(ev nostr.Event) {
-	ctx := context.Background()
-	//for _, url := range []string{"wss://nostr.data.haus", "wss://nostr-pub.wellorder.net"} {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	for _, url := range relaysToPublishTo {
 		relay, err := nostr.RelayConnect(ctx, url)
 		if err != nil {
@@ -91,6 +92,4 @@ func nostrPostItem(ev nostr.Event) {
 
 		log.Printf("[DEBUG] Event published to %s\n", url)
 	}
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
 }
