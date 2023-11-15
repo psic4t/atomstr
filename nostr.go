@@ -90,6 +90,12 @@ func nostrPostItem(ev nostr.Event) {
 			continue
 		}
 
+		err = relay.Close()
+		if err != nil {
+			log.Println("[ERROR]", err)
+			continue
+		}
+
 		log.Printf("[DEBUG] Event published to %s\n", url)
 	}
 }
