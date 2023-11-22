@@ -21,7 +21,7 @@ var relaysToPublishTo = strings.Split(r, ", ")
 var defaultFeedImage = getEnv("DEFAULT_FEED_IMAGE", "https://void.cat/d/NDrSDe4QMx9jh6bD9LJwcK")
 var dbPath = getEnv("DB_PATH", "./atomstr.db")
 var noPub, _ = strconv.ParseBool(getEnv("NOPUB", "false"))
-var atomstrversion string = "0.9.3"
+var atomstrversion string = "0.9.3.1"
 
 type Atomstr struct {
 	db *sql.DB

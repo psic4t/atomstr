@@ -34,9 +34,9 @@ func convertTimeString(itemTime string) *time.Time {
 }
 
 func checkMaxAge(itemTime *time.Time, maxAgeHours time.Duration) bool {
-	maxAge := time.Now().Add(-maxAgeHours)
+	maxAge := time.Now().UTC().Add(-maxAgeHours) // make sure everything is UTC!
 
-	if itemTime.After(maxAge) {
+	if itemTime.UTC().After(maxAge) {
 		return true
 	}
 	return false
