@@ -101,6 +101,7 @@ img{max-width:100%;}
 
 table {
 	width: 100%;
+	table-layout: fixed;
 }
 
 tr:hover {background-color: #f2f2f2;}
@@ -111,6 +112,10 @@ th {
 
 th.opener {
 	width: 14em;
+}
+
+td {
+	overflow: hidden;
 }
 
 .input {
