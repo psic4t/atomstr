@@ -16,12 +16,12 @@ var logLevel = getEnv("LOG_LEVEL", "DEBUG")
 var webserverPort = getEnv("WEBSERVER_PORT", "8061")
 var nip05Domain = getEnv("NIP05_DOMAIN", "atomstr.data.haus")
 var maxWorkers, _ = strconv.Atoi(getEnv("MAX_WORKERS", "5"))
-var r = getEnv("RELAYS_TO_PUBLISH_TO", "wss://nostr.data.haus, wss://spore.ws, wss://relayable.org")
+var r = getEnv("RELAYS_TO_PUBLISH_TO", "wss://nostr.data.haus, wss://nos.lol, wss://relay.damus.io")
 var relaysToPublishTo = strings.Split(r, ", ")
 var defaultFeedImage = getEnv("DEFAULT_FEED_IMAGE", "https://void.cat/d/NDrSDe4QMx9jh6bD9LJwcK")
 var dbPath = getEnv("DB_PATH", "./atomstr.db")
 var noPub, _ = strconv.ParseBool(getEnv("NOPUB", "false"))
-var atomstrversion string = "0.9.3.1"
+var atomstrversion string = "0.9.4"
 
 type Atomstr struct {
 	db *sql.DB
