@@ -25,7 +25,7 @@ func nostrUpdateFeedMetadata(feedItem *feedStruct) {
 	ev := nostr.Event{
 		PubKey:    feedItem.Pub,
 		CreatedAt: nostr.Now(),
-		Kind:      nostr.KindSetMetadata,
+		Kind:      nostr.KindProfileMetadata,
 		Tags:      nostr.Tags{},
 		Content:   string(content),
 	}
@@ -84,7 +84,7 @@ func nostrPostItem(ev nostr.Event) {
 			log.Println("[ERROR]", err)
 			continue
 		}
-		_, err = relay.Publish(ctx, ev)
+		err = relay.Publish(ctx, ev)
 		if err != nil {
 			log.Println("[ERROR]", err)
 			continue
