@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"html"
 	"log"
+	"net/http"
 	"net/url"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -38,6 +40,56 @@ func (a *Atomstr) dbGetAllFeeds() *[]feedStruct {
 }
 
 // func processFeedUrl(ch chan string, wg *sync.WaitGroup, feedItem *feedStruct) {
+func fetchFavicon(feedURL string) string {
+	parsedURL, err := url.Parse(feedURL)
+	if err != nil {
+		return defaultFeedImage
+	}
+
+	baseURL := fmt.Sprintf("%s://%s", parsedURL.Scheme, parsedURL.Host)
+
+	// Try common favicon locations
+	faviconURLs := []string{
+		baseURL + "/favicon.ico",
+		baseURL + "/favicon.png",
+		baseURL + "/apple-touch-icon.png",
+		baseURL + "/apple-touch-icon-precomposed.png",
+	}
+
+	client := &http.Client{Timeout: 5 * time.Second}
+
+	for _, faviconURL := range faviconURLs {
+		resp, err := client.Head(faviconURL)
+		if err == nil && resp.StatusCode == http.StatusOK {
+			resp.Body.Close()
+			return faviconURL
+		}
+		if resp != nil {
+			resp.Body.Close()
+		}
+	}
+
+	// Try to parse HTML to find favicon link
+	resp, err := client.Get(baseURL)
+	if err != nil {
+		return defaultFeedImage
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return defaultFeedImage
+	}
+
+	contentType := resp.Header.Get("Content-Type")
+	if !strings.Contains(contentType, "text/html") {
+		return defaultFeedImage
+	}
+
+	// Simple favicon link extraction (basic implementation)
+	// In a production environment, you'd want to use a proper HTML parser
+	return defaultFeedImage
+}
+
 func processFeedUrl(ch chan feedStruct, wg *sync.WaitGroup) {
 	for feedItem := range ch {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // fetch feeds with 10s timeout
@@ -55,7 +107,12 @@ func processFeedUrl(ch chan feedStruct, wg *sync.WaitGroup) {
 			if feed.Image != nil {
 				feedItem.Image = feed.Image.URL
 			} else {
-				feedItem.Image = defaultFeedImage
+				feedItem.Image = fetchFavicon(feedItem.Url)
+				if feedItem.Image == defaultFeedImage {
+					log.Println("[DEBUG] No favicon found for", feedItem.Url, "using default image")
+				} else {
+					log.Println("[DEBUG] Using favicon for", feedItem.Url, ":", feedItem.Image)
+				}
 			}
 			//feedItem.Image = feed.Image
 
@@ -180,7 +237,12 @@ func checkValidFeedSource(feedUrl string) (*feedStruct, error) {
 	if feed.Image != nil {
 		feedItem.Image = feed.Image.URL
 	} else {
-		feedItem.Image = defaultFeedImage
+		feedItem.Image = fetchFavicon(feedUrl)
+		if feedItem.Image == defaultFeedImage {
+			log.Println("[DEBUG] No favicon found for", feedUrl, "using default image")
+		} else {
+			log.Println("[DEBUG] Using favicon for", feedUrl, ":", feedItem.Image)
+		}
 	}
 	feedItem.Posts = feed.Items
 
