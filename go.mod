@@ -1,6 +1,6 @@
 module data.haus/atomstr
 
-go 1.22
+go 1.25
 
 require (
 	github.com/hashicorp/logutils v1.0.0
