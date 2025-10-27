@@ -15,9 +15,9 @@
 <br />
 
 <h2>Add a new feed</h2>
-<form class="addfeed" action="/add" method="POST">
-<input class="input" name="url" type="url" placeholder="https://example.com/feed">
-<input type="submit">
+<form class="addfeed" id="addFeedForm" action="/add" method="POST">
+<input class="input" id="feedUrl" name="url" type="url" placeholder="https://example.com/feed" required>
+<input type="submit" value="Add Feed">
 </form>
 
 <br />
@@ -30,10 +30,10 @@
 		<tr>
 			<td>{{.Url}}</td>
 			<td>
-				<a href=https://snort.social/p/{{.Npub}}>Snort</a>
-				<a href=https://nostrudel.ninja/#/u/{{.Npub}}>noStrudel</a>
-				<a href=https://primal.net/profile/{{.Npub}}>Primal</a>
-				<a href=nostr:{{.Npub}}>Native</a>
+				<a href="https://snort.social/p/{{.Npub}}">Snort</a>
+				<a href="https://nostrudel.ninja/#/u/{{.Npub}}">noStrudel</a>
+				<a href="https://primal.net/profile/{{.Npub}}">Primal</a>
+				<a href="nostr:{{.Npub}}">Native</a>
 			</td>
 
 		</tr>
@@ -44,5 +44,108 @@
 <br />
 <div id="footer">atomstr {{.Version}} &bullet; Released under GPL &bullet; <a href="https://git.sr.ht/~psic4t/atomstr">Code on Sourcehut</a> &bullet; CC by-nc-nd psic4t<br>
 </div>
+
+<!-- Spinner/Lightbox Overlay -->
+<div id="overlay" class="overlay">
+	<div class="spinner-container">
+		<div class="spinner"></div>
+		<div class="spinner-text">Adding feed...</div>
+		<div class="spinner-status" id="spinnerStatus">Validating feed URL</div>
+		<div id="errorMessage" class="error-message" style="display: none;"></div>
+	</div>
+</div>
+
+<script>
+document.getElementById('addFeedForm').addEventListener('submit', async function(e) {
+	e.preventDefault();
+	
+	const feedUrl = document.getElementById('feedUrl').value.trim();
+	if (!feedUrl) {
+		return;
+	}
+	
+	const overlay = document.getElementById('overlay');
+	const spinnerStatus = document.getElementById('spinnerStatus');
+	const errorMessage = document.getElementById('errorMessage');
+	
+	// Show overlay
+	overlay.classList.add('active');
+	errorMessage.style.display = 'none';
+	
+	try {
+		// Start async feed addition
+		const response = await fetch('/add-async', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/x-www-form-urlencoded',
+			},
+			body: 'url=' + encodeURIComponent(feedUrl)
+		});
+		
+		if (!response.ok) {
+			throw new Error('Failed to start feed processing');
+		}
+		
+		const data = await response.json();
+		
+		if (data.error) {
+			throw new Error(data.error);
+		}
+		
+		// Poll for completion
+		const jobId = data.job_id;
+		await pollJobStatus(jobId);
+		
+	} catch (error) {
+		spinnerStatus.textContent = 'Error occurred';
+		errorMessage.textContent = error.message;
+		errorMessage.style.display = 'block';
+		
+		// Hide overlay after 3 seconds on error
+		setTimeout(() => {
+			overlay.classList.remove('active');
+		}, 3000);
+	}
+});
+
+async function pollJobStatus(jobId) {
+	const spinnerStatus = document.getElementById('spinnerStatus');
+	const overlay = document.getElementById('overlay');
+	
+	const poll = async () => {
+		try {
+			const response = await fetch(`/add-status/${jobId}`);
+			if (!response.ok) {
+				throw new Error('Failed to check job status');
+			}
+			
+			const data = await response.json();
+			
+			if (data.status === 'completed') {
+				// Redirect to results page
+				window.location.href = `/add?success=true&url=${encodeURIComponent(data.url)}`;
+			} else if (data.status === 'failed') {
+				throw new Error(data.error || 'Feed processing failed');
+			} else {
+				// Update status and continue polling
+				spinnerStatus.textContent = data.message || 'Processing feed...';
+				setTimeout(poll, 1000); // Poll every second
+			}
+		} catch (error) {
+			spinnerStatus.textContent = 'Error occurred';
+			document.getElementById('errorMessage').textContent = error.message;
+			document.getElementById('errorMessage').style.display = 'block';
+			
+			// Hide overlay after 3 seconds on error
+			setTimeout(() => {
+				overlay.classList.remove('active');
+			}, 3000);
+		}
+	};
+	
+	await poll();
+}
+</script>
+
 </body>
 </html>

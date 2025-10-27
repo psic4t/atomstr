@@ -17,19 +17,6 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
-func convertTimeString(itemTime string) *time.Time {
-	formats := []string{time.RFC3339, time.RFC1123Z, time.RFC1123}
-
-	for _, format := range formats {
-		if postTime, err := time.Parse(format, itemTime); err == nil {
-			return &postTime
-		}
-	}
-
-	log.Println("[WARN] Can't parse element time:", itemTime)
-	return nil
-}
-
 func checkMaxAge(itemTime *time.Time, maxAgeHours time.Duration) bool {
 	maxAge := time.Now().UTC().Add(-maxAgeHours) // make sure everything is UTC!
 

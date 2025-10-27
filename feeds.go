@@ -302,7 +302,7 @@ func (a *Atomstr) addSource(feedUrl string) (*feedStruct, error) {
 	feedItemKeys := generateKeysForUrl(feedUrl)
 	feedItem.Pub = feedItemKeys.Pub
 	feedItem.Sec = feedItemKeys.Sec
-	// fmt.Println(feedItem)
+	fmt.Println(feedItem.Pub)
 
 	if err := a.dbWriteFeed(feedItem); err != nil {
 		return feedItem, err

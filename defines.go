@@ -12,7 +12,7 @@ import (
 var (
 	fetchInterval, _           = time.ParseDuration(getEnv("FETCH_INTERVAL", "15m"))
 	metadataInterval, _        = time.ParseDuration(getEnv("METADATA_INTERVAL", "12h"))
-	historyInterval, _         = time.ParseDuration(getEnv("HISTORY_INTERVAL", "72h"))
+	historyInterval, _         = time.ParseDuration(getEnv("HISTORY_INTERVAL", "2h"))
 	logLevel                   = getEnv("LOG_LEVEL", "DEBUG")
 	webserverPort              = getEnv("WEBSERVER_PORT", "8061")
 	nip05Domain                = getEnv("NIP05_DOMAIN", "atomstr.data.haus")
@@ -57,4 +57,25 @@ type webIndex struct {
 type webAddFeed struct {
 	Status string
 	Feed   feedStruct
+}
+
+type asyncJob struct {
+	ID      string
+	URL     string
+	Status  string // "processing", "completed", "failed"
+	Message string
+	Error   string
+	FeedURL string
+}
+
+type asyncResponse struct {
+	JobID string `json:"job_id"`
+	Error string `json:"error,omitempty"`
+}
+
+type statusResponse struct {
+	Status  string `json:"status"`
+	Message string `json:"message,omitempty"`
+	Error   string `json:"error,omitempty"`
+	URL     string `json:"url,omitempty"`
 }
