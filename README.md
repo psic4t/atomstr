@@ -16,7 +16,7 @@ Although self hosting is preferable (it always is), there's a test instance at [
 
 ## Installation / Configuration
 
-The prefered way to run this is via Docker. Just use the included [docker-compose.yaml](https://git.sr.ht/~psic4t/atomstr/blob/master/docker-compose.yaml) and modify it to your needs. It contains ready to run Traefik labels. You can remove this part, if you are using ngnix or HAproxy.
+The prefered way to run this is via Docker. Just use the included docker-compose.yaml and modify it to your needs. It contains ready to run Traefik labels. You can remove this part, if you are using ngnix or HAproxy.
 
 If you want to compile it yourself just run "make". 
 
