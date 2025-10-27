@@ -136,7 +136,7 @@ func processFeedUrl(ch chan feedStruct, wg *sync.WaitGroup) {
 			log.Println("[ERROR] Can't update feed", feedItem.Url)
 		} else {
 			log.Println("[DEBUG] Updating feed ", feedItem.Url)
-			//fmt.Println(feed)
+			// fmt.Println(feed)
 			feedItem.Title = feed.Title
 			feedItem.Description = feed.Description
 			feedItem.Link = feed.Link
@@ -150,7 +150,7 @@ func processFeedUrl(ch chan feedStruct, wg *sync.WaitGroup) {
 					log.Println("[DEBUG] Using favicon for", feedItem.Url, ":", feedItem.Image)
 				}
 			}
-			//feedItem.Image = feed.Image
+			// feedItem.Image = feed.Image
 
 			for i := range feed.Items {
 				processFeedPost(feedItem, feed.Items[i], fetchInterval)
@@ -167,7 +167,7 @@ func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.D
 	p.AllowStandardURLs()
 	p.AllowAttrs("href").OnElements("a")
 
-	//fmt.Println(feedPost.PublishedParsed)
+	// fmt.Println(feedPost.PublishedParsed)
 
 	// ditch it, if no timestamp
 	if feedPost.PublishedParsed == nil {
@@ -177,18 +177,18 @@ func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.D
 	// if time right, then push
 	if checkMaxAge(feedPost.PublishedParsed, interval) {
 		var feedText string
-		var re = regexp.MustCompile(`nitter|telegram`)
+		re := regexp.MustCompile(`nitter|telegram`)
 		if re.MatchString(feedPost.Link) { // fix duplicated title in nitter/telegram
 			feedText = p.Sanitize(feedPost.Description)
 		} else {
 			feedText = feedPost.Title + "\n\n" + p.Sanitize(feedPost.Description)
 		}
-		//fmt.Println(feedText)
+		// fmt.Println(feedText)
 
-		var regImg = regexp.MustCompile(`\<img.src=\"(http.*\.(jpg|png|gif)).*\/\>`) // allow inline images
+		regImg := regexp.MustCompile(`\<img.src=\"(http.*\.(jpg|png|gif)).*\/\>`) // allow inline images
 		feedText = regImg.ReplaceAllString(feedText, "$1\n")
 
-		var regLink = regexp.MustCompile(`\<a.href=\"(https.*?)\"\ .*\<\/a\>`) // allow inline links
+		regLink := regexp.MustCompile(`\<a.href=\"(https.*?)\"\ .*\<\/a\>`) // allow inline links
 		feedText = regLink.ReplaceAllString(feedText, "$1\n")
 
 		feedText = html.UnescapeString(feedText) // decode html strings
@@ -241,12 +241,11 @@ func (a *Atomstr) dbWriteFeed(feedItem *feedStruct) bool {
 }
 
 func (a *Atomstr) dbGetFeed(feedUrl string) *feedStruct {
-	sqlStatement := `SELECT pub, sec, url FROM feeds WHERE url=$1;`
+	sqlStatement := `SELECT pub, sec, url FROM feeds WHERE url=?;`
 	row := a.db.QueryRow(sqlStatement, feedUrl)
 
 	feedItem := feedStruct{}
 	err := row.Scan(&feedItem.Pub, &feedItem.Sec, &feedItem.Url)
-
 	if err != nil {
 		log.Println("[INFO] Feed not found in DB")
 	}
@@ -286,9 +285,9 @@ func checkValidFeedSource(feedUrl string) (*feedStruct, error) {
 }
 
 func (a *Atomstr) addSource(feedUrl string) (*feedStruct, error) {
-	//var feedElem2 *feedStruct
+	// var feedElem2 *feedStruct
 	feedItem, err := checkValidFeedSource(feedUrl)
-	//if feedItem.Title == "" {
+	// if feedItem.Title == "" {
 	if err != nil {
 		log.Println("[ERROR] No valid feed found on", feedUrl)
 		return feedItem, err
@@ -304,7 +303,7 @@ func (a *Atomstr) addSource(feedUrl string) (*feedStruct, error) {
 	feedItemKeys := generateKeysForUrl(feedUrl)
 	feedItem.Pub = feedItemKeys.Pub
 	feedItem.Sec = feedItemKeys.Sec
-	//fmt.Println(feedItem)
+	// fmt.Println(feedItem)
 
 	a.dbWriteFeed(feedItem)
 	if noPub == false {
@@ -319,6 +318,7 @@ func (a *Atomstr) addSource(feedUrl string) (*feedStruct, error) {
 
 	return feedItem, err
 }
+
 func (a *Atomstr) deleteSource(feedUrl string) bool {
 	// check for existing feed
 	feedTest := a.dbGetFeed(feedUrl)
@@ -345,5 +345,4 @@ func (a *Atomstr) listFeeds() {
 		fmt.Print(nip19Pub + " ")
 		fmt.Println(feedItem.Url)
 	}
-
 }
