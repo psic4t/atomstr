@@ -323,7 +323,7 @@ func (a *Atomstr) deleteSource(feedUrl string) bool {
 	// check for existing feed
 	feedTest := a.dbGetFeed(feedUrl)
 	if feedTest.Url != "" {
-		sqlStatement := `DELETE FROM feeds WHERE url=$1;`
+		sqlStatement := `DELETE FROM feeds WHERE url=?;`
 		_, err := a.db.Exec(sqlStatement, feedUrl)
 		if err != nil {
 			log.Println("[WARN] Can't remove feed")
