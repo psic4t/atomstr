@@ -67,7 +67,7 @@ func main() {
 		log.Println("[INFO] atomstr version ", atomstrversion)
 	} else {
 		log.Println("[INFO] Starting atomstr v", atomstrversion)
-		//slog.Info("Starting atomstr v", atomstrversion)
+		// slog.Info("Starting atomstr v", atomstrversion)
 		go a.webserver()
 
 		// first run
@@ -93,7 +93,7 @@ func main() {
 		}()
 		sig := <-cancelChan
 
-		log.Println("[DEBUG] Caught signal %v", sig)
+		log.Printf("[DEBUG] Caught signal %v", sig)
 		metadataTicker.Stop()
 		updateTicker.Stop()
 		log.Println("[INFO] Closing DB")

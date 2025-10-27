@@ -45,10 +45,10 @@ func checkMaxAge(itemTime *time.Time, maxAgeHours time.Duration) bool {
 func dbInit() *sql.DB {
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
-		log.Fatal("[FATAL] open db: %v", err)
+		log.Fatalf("[FATAL] open db: %v", err)
 	}
 	log.Printf("[INFO] database opened at %s", dbPath)
-	//defer db.Close()
+	// defer db.Close()
 
 	_, err = db.Exec(sqlInit)
 	if err != nil {
