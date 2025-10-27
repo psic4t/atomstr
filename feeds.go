@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"html"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -49,11 +50,13 @@ func fetchFavicon(feedURL string) string {
 	baseURL := fmt.Sprintf("%s://%s", parsedURL.Scheme, parsedURL.Host)
 
 	// Try common favicon locations
+	// Prioritize larger, modern formats first
 	faviconURLs := []string{
-		baseURL + "/favicon.ico",
-		baseURL + "/favicon.png",
 		baseURL + "/apple-touch-icon.png",
 		baseURL + "/apple-touch-icon-precomposed.png",
+		baseURL + "/icon.svg",
+		baseURL + "/favicon.png",
+		baseURL + "/favicon.ico",
 	}
 
 	client := &http.Client{Timeout: 5 * time.Second}
@@ -86,7 +89,40 @@ func fetchFavicon(feedURL string) string {
 	}
 
 	// Simple favicon link extraction (basic implementation)
-	// In a production environment, you'd want to use a proper HTML parser
+	// Extract favicon URLs from HTML using regex
+	body, _ := io.ReadAll(resp.Body)
+	htmlContent := string(body)
+
+	// Look for various favicon link tags
+	patterns := []string{
+		`<link[^>]+rel=["'](?:apple-touch-icon|icon|shortcut icon)["'][^>]+href=["']([^"']+)["']`,
+		`<link[^>]+href=["']([^"']+)["'][^>]+rel=["'](?:apple-touch-icon|icon|shortcut icon)["']`,
+	}
+
+	var bestIcon string
+
+	for _, pattern := range patterns {
+		re := regexp.MustCompile(pattern)
+		matches := re.FindAllStringSubmatch(htmlContent, -1)
+		for _, match := range matches {
+			if len(match) > 1 {
+				iconURL := match[1]
+				if strings.HasPrefix(iconURL, "/") {
+					iconURL = baseURL + iconURL
+				}
+				// Simple size detection - prefer larger icons
+				if strings.Contains(iconURL, "192") || strings.Contains(iconURL, "180") {
+					return iconURL
+				}
+				bestIcon = iconURL
+			}
+		}
+	}
+
+	if bestIcon != "" {
+		return bestIcon
+	}
+
 	return defaultFeedImage
 }
 
