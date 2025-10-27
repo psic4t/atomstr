@@ -18,19 +18,16 @@ func getEnv(key, fallback string) string {
 }
 
 func convertTimeString(itemTime string) *time.Time {
-	// find right date format
+	formats := []string{time.RFC3339, time.RFC1123Z, time.RFC1123}
 
-	postTime, err := time.Parse(time.RFC3339, itemTime)
-	if err != nil {
-		postTime, err = time.Parse(time.RFC1123Z, itemTime) // try other one
+	for _, format := range formats {
+		if postTime, err := time.Parse(format, itemTime); err == nil {
+			return &postTime
+		}
 	}
-	if err != nil {
-		postTime, err = time.Parse(time.RFC1123, itemTime) // try other one
-	}
-	if err != nil {
-		log.Println("[WARN] Can't parse element time")
-	}
-	return &postTime
+
+	log.Println("[WARN] Can't parse element time:", itemTime)
+	return nil
 }
 
 func checkMaxAge(itemTime *time.Time, maxAgeHours time.Duration) bool {
