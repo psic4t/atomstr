@@ -21,7 +21,7 @@ func (a *Atomstr) webMain(w http.ResponseWriter, r *http.Request) {
 	data := webIndex{
 		Relays:  relaysToPublishTo,
 		Feeds:   *feeds,
-		Version: atomstrversion,
+		Version: atomstrVersion,
 	}
 	tmpl.Execute(w, data)
 }
