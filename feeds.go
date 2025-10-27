@@ -129,9 +129,9 @@ func fetchFavicon(feedURL string) string {
 func processFeedUrl(ch chan feedStruct, wg *sync.WaitGroup) {
 	for feedItem := range ch {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // fetch feeds with 10s timeout
-		defer cancel()
 		fp := gofeed.NewParser()
 		feed, err := fp.ParseURLWithContext(feedItem.Url, ctx)
+		cancel() // Cancel immediately after use
 		if err != nil {
 			log.Println("[ERROR] Can't update feed", feedItem.Url)
 		} else {
