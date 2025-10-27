@@ -9,19 +9,21 @@ import (
 	"github.com/mmcdole/gofeed"
 )
 
-var fetchInterval, _ = time.ParseDuration(getEnv("FETCH_INTERVAL", "15m"))
-var metadataInterval, _ = time.ParseDuration(getEnv("METADATA_INTERVAL", "12h"))
-var historyInterval, _ = time.ParseDuration(getEnv("HISTORY_INTERVAL", "72h"))
-var logLevel = getEnv("LOG_LEVEL", "DEBUG")
-var webserverPort = getEnv("WEBSERVER_PORT", "8061")
-var nip05Domain = getEnv("NIP05_DOMAIN", "atomstr.data.haus")
-var maxWorkers, _ = strconv.Atoi(getEnv("MAX_WORKERS", "5"))
-var r = getEnv("RELAYS_TO_PUBLISH_TO", "wss://nostr.data.haus, wss://nos.lol, wss://relay.damus.io")
-var relaysToPublishTo = strings.Split(r, ", ")
-var defaultFeedImage = getEnv("DEFAULT_FEED_IMAGE", "https://void.cat/d/NDrSDe4QMx9jh6bD9LJwcK")
-var dbPath = getEnv("DB_PATH", "./atomstr.db")
-var noPub, _ = strconv.ParseBool(getEnv("NOPUB", "false"))
-var atomstrversion string = "0.9.4"
+var (
+	fetchInterval, _           = time.ParseDuration(getEnv("FETCH_INTERVAL", "15m"))
+	metadataInterval, _        = time.ParseDuration(getEnv("METADATA_INTERVAL", "12h"))
+	historyInterval, _         = time.ParseDuration(getEnv("HISTORY_INTERVAL", "72h"))
+	logLevel                   = getEnv("LOG_LEVEL", "DEBUG")
+	webserverPort              = getEnv("WEBSERVER_PORT", "8061")
+	nip05Domain                = getEnv("NIP05_DOMAIN", "atomstr.data.haus")
+	maxWorkers, _              = strconv.Atoi(getEnv("MAX_WORKERS", "5"))
+	r                          = getEnv("RELAYS_TO_PUBLISH_TO", "wss://nostr.data.haus, wss://nos.lol, wss://relay.damus.io")
+	relaysToPublishTo          = strings.Split(r, ", ")
+	defaultFeedImage           = getEnv("DEFAULT_FEED_IMAGE", "https://void.cat/d/NDrSDe4QMx9jh6bD9LJwcK")
+	dbPath                     = getEnv("DB_PATH", "./atomstr.db")
+	noPub, _                   = strconv.ParseBool(getEnv("NOPUB", "false"))
+	atomstrversion      string = "0.9.5"
+)
 
 type Atomstr struct {
 	db *sql.DB
