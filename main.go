@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -12,8 +13,11 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func (a *Atomstr) startWorkers(work string) {
-	feeds := a.dbGetAllFeeds()
+func (a *Atomstr) startWorkers(work string) error {
+	feeds, err := a.dbGetAllFeeds()
+	if err != nil {
+		return fmt.Errorf("failed to get feeds: %w", err)
+	}
 	if len(*feeds) == 0 {
 		log.Println("[WARN] No feeds found")
 	}
@@ -42,6 +46,7 @@ func (a *Atomstr) startWorkers(work string) {
 	close(ch) // this will cause the workers to stop and exit their receive loop
 	wg.Wait() // make sure they all exit
 	log.Println("[INFO] Stop", work)
+	return nil
 }
 
 func main() {
@@ -60,9 +65,13 @@ func main() {
 	if flagset["a"] {
 		a.addSource(*feedNew)
 	} else if flagset["l"] {
-		a.listFeeds()
+		if err := a.listFeeds(); err != nil {
+			log.Printf("[ERROR] %v", err)
+		}
 	} else if flagset["d"] {
-		a.deleteSource(*feedDelete)
+		if err := a.deleteSource(*feedDelete); err != nil {
+			log.Printf("[ERROR] %v", err)
+		}
 	} else if flagset["v"] {
 		log.Println("[INFO] atomstr version ", atomstrversion)
 	} else {
@@ -71,8 +80,12 @@ func main() {
 		go a.webserver()
 
 		// first run
-		a.startWorkers("metadata")
-		a.startWorkers("scrape")
+		if err := a.startWorkers("metadata"); err != nil {
+			log.Printf("[ERROR] %v", err)
+		}
+		if err := a.startWorkers("scrape"); err != nil {
+			log.Printf("[ERROR] %v", err)
+		}
 
 		metadataTicker := time.NewTicker(metadataInterval)
 		updateTicker := time.NewTicker(fetchInterval)
@@ -85,9 +98,13 @@ func main() {
 			for {
 				select {
 				case <-metadataTicker.C:
-					a.startWorkers("metadata")
+					if err := a.startWorkers("metadata"); err != nil {
+						log.Printf("[ERROR] %v", err)
+					}
 				case <-updateTicker.C:
-					a.startWorkers("scrape")
+					if err := a.startWorkers("scrape"); err != nil {
+						log.Printf("[ERROR] %v", err)
+					}
 				}
 			}
 		}()

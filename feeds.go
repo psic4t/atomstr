@@ -19,11 +19,11 @@ import (
 	"github.com/nbd-wtf/go-nostr/nip19"
 )
 
-func (a *Atomstr) dbGetAllFeeds() *[]feedStruct {
+func (a *Atomstr) dbGetAllFeeds() (*[]feedStruct, error) {
 	sqlStatement := `SELECT pub, sec, url FROM feeds`
 	rows, err := a.db.Query(sqlStatement)
 	if err != nil {
-		log.Fatal("[ERROR] Returning feeds from DB failed")
+		return nil, fmt.Errorf("[ERROR] Returning feeds from DB failed: %w", err)
 	}
 
 	feedItems := []feedStruct{}
@@ -31,13 +31,13 @@ func (a *Atomstr) dbGetAllFeeds() *[]feedStruct {
 	for rows.Next() {
 		feedItem := feedStruct{}
 		if err := rows.Scan(&feedItem.Pub, &feedItem.Sec, &feedItem.Url); err != nil {
-			log.Fatal("[ERROR] Scanning for feeds failed")
+			return nil, fmt.Errorf("[ERROR] Scanning for feeds failed: %w", err)
 		}
 		feedItem.Npub, _ = nip19.EncodePublicKey(feedItem.Pub)
 		feedItems = append(feedItems, feedItem)
 	}
 
-	return &feedItems
+	return &feedItems, nil
 }
 
 // func processFeedUrl(ch chan string, wg *sync.WaitGroup, feedItem *feedStruct) {
@@ -229,15 +229,14 @@ func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.D
 	}
 }
 
-func (a *Atomstr) dbWriteFeed(feedItem *feedStruct) bool {
+func (a *Atomstr) dbWriteFeed(feedItem *feedStruct) error {
 	_, err := a.db.Exec(`insert into feeds (pub, sec, url) values(?, ?, ?)`, feedItem.Pub, feedItem.Sec, feedItem.Url)
 	if err != nil {
-		log.Println("[ERROR] Can't add feed!")
-		log.Fatal(err)
+		return fmt.Errorf("[ERROR] Can't add feed: %w", err)
 	}
 	nip19Pub, _ := nip19.EncodePublicKey(feedItem.Pub)
 	log.Println("[INFO] Added feed " + feedItem.Url + " with public key " + nip19Pub)
-	return true
+	return nil
 }
 
 func (a *Atomstr) dbGetFeed(feedUrl string) *feedStruct {
@@ -305,7 +304,9 @@ func (a *Atomstr) addSource(feedUrl string) (*feedStruct, error) {
 	feedItem.Sec = feedItemKeys.Sec
 	// fmt.Println(feedItem)
 
-	a.dbWriteFeed(feedItem)
+	if err := a.dbWriteFeed(feedItem); err != nil {
+		return feedItem, err
+	}
 	if noPub == false {
 		nostrUpdateFeedMetadata(feedItem)
 	}
@@ -319,30 +320,32 @@ func (a *Atomstr) addSource(feedUrl string) (*feedStruct, error) {
 	return feedItem, err
 }
 
-func (a *Atomstr) deleteSource(feedUrl string) bool {
+func (a *Atomstr) deleteSource(feedUrl string) error {
 	// check for existing feed
 	feedTest := a.dbGetFeed(feedUrl)
 	if feedTest.Url != "" {
 		sqlStatement := `DELETE FROM feeds WHERE url=?;`
 		_, err := a.db.Exec(sqlStatement, feedUrl)
 		if err != nil {
-			log.Println("[WARN] Can't remove feed")
-			log.Fatal(err)
+			return fmt.Errorf("[WARN] Can't remove feed: %w", err)
 		}
 		log.Println("[INFO] feed removed")
-		return true
+		return nil
 	} else {
-		log.Println("[WARN] feed not found")
-		return false
+		return fmt.Errorf("[WARN] feed not found")
 	}
 }
 
-func (a *Atomstr) listFeeds() {
-	feeds := a.dbGetAllFeeds()
+func (a *Atomstr) listFeeds() error {
+	feeds, err := a.dbGetAllFeeds()
+	if err != nil {
+		return err
+	}
 
 	for _, feedItem := range *feeds {
 		nip19Pub, _ := nip19.EncodePublicKey(feedItem.Pub)
 		fmt.Print(nip19Pub + " ")
 		fmt.Println(feedItem.Url)
 	}
+	return nil
 }

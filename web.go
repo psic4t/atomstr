@@ -13,7 +13,11 @@ import (
 
 func (a *Atomstr) webMain(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("templates/index.tmpl"))
-	feeds := a.dbGetAllFeeds()
+	feeds, err := a.dbGetAllFeeds()
+	if err != nil {
+		http.Error(w, "Failed to get feeds", http.StatusInternalServerError)
+		return
+	}
 	data := webIndex{
 		Relays:  relaysToPublishTo,
 		Feeds:   *feeds,

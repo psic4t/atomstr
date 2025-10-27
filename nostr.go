@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -54,8 +55,11 @@ func (a *Atomstr) processFeedMetadata(ch chan feedStruct, wg *sync.WaitGroup) {
 	wg.Done()
 }
 
-func (a *Atomstr) ALTnostrUpdateAllFeedsMetadata() {
-	feeds := a.dbGetAllFeeds()
+func (a *Atomstr) ALTnostrUpdateAllFeedsMetadata() error {
+	feeds, err := a.dbGetAllFeeds()
+	if err != nil {
+		return fmt.Errorf("failed to get feeds: %w", err)
+	}
 
 	log.Println("[INFO] Updating feeds metadata")
 	for _, feedItem := range *feeds {
@@ -72,6 +76,7 @@ func (a *Atomstr) ALTnostrUpdateAllFeedsMetadata() {
 		nostrUpdateFeedMetadata(&feedItem)
 	}
 	log.Println("[INFO] Finished updating feeds metadata")
+	return nil
 }
 
 func nostrPostItem(ev nostr.Event) {
