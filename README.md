@@ -36,7 +36,7 @@ The following variables are available:
 - `NIP05_DOMAIN` webserver domain, default  "atomstr.data.haus"
 - `MAX_WORKERS` max work in paralel. Default "5"
 - `RELAYS_TO_PUBLISH_TO` to which relays this server posts to, add more comma separated. Default "wss://nostr.data.haus"
-- `DEFAULT_FEED_IMAGE` if no feed image is found, use this. Default "https://void.cat/d/NDrSDe4QMx9jh6bD9LJwcK"
+- `DEFAULT_FEED_IMAGE` if no feed image is found, use this. Default "https://upload.wikimedia.org/wikipedia/en/thumb/4/43/Feed-icon.svg/256px-Feed-icon.svg.png"
 
 ## CLI Usage
 
@@ -56,6 +56,5 @@ Delete a feed:
 
 ## About
 
-Questions? Ideas? File bugs and TODOs through the [issue
-tracker](https://todo.sr.ht/~psic4t/atomstr) or send an email to
-[~psic4t/public-inbox@todo.sr.ht](mailto:~psic4t/public-inbox@todo.sr.ht)
+Questions? Ideas? File bugs and TODOs through the issue
+tracker!

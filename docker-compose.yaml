@@ -9,10 +9,10 @@ services:
       METADATA_INTERVAL: 2h
       WEBSERVER_PORT: 8061
       NIP05_DOMAIN: atomstr.domain.com
-      DEFAULT_PROFILE_PICTURE_URL: https://void.cat/d/NDrSDe4QMx9jh6bD9LJwcK
+      DEFAULT_PROFILE_PICTURE_URL: https://upload.wikimedia.org/wikipedia/en/thumb/4/43/Feed-icon.svg/256px-Feed-icon.svg.png
       RELAYS_TO_PUBLISH_TO: wss://nostr.data.haus
       MAX_WORKERS: 5
-      LOG_LEVEL: INFO 
+      LOG_LEVEL: INFO
     networks:
       - proxy
     volumes:

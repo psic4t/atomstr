@@ -19,7 +19,7 @@ var (
 	maxWorkers, _              = strconv.Atoi(getEnv("MAX_WORKERS", "5"))
 	r                          = getEnv("RELAYS_TO_PUBLISH_TO", "wss://nostr.data.haus, wss://nos.lol, wss://relay.damus.io")
 	relaysToPublishTo          = strings.Split(r, ", ")
-	defaultFeedImage           = getEnv("DEFAULT_FEED_IMAGE", "https://void.cat/d/NDrSDe4QMx9jh6bD9LJwcK")
+	defaultFeedImage           = getEnv("DEFAULT_FEED_IMAGE", "https://upload.wikimedia.org/wikipedia/en/thumb/4/43/Feed-icon.svg/256px-Feed-icon.svg.png")
 	dbPath                     = getEnv("DB_PATH", "./atomstr.db")
 	noPub, _                   = strconv.ParseBool(getEnv("NOPUB", "false"))
 	atomstrVersion      string = "0.9.6"
