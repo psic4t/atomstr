@@ -73,10 +73,10 @@ func main() {
 			log.Printf("[ERROR] %v", err)
 		}
 	} else if flagset["v"] {
-		log.Println("[INFO] atomstr version ", atomstrversion)
+		log.Println("[INFO] atomstr version ", atomstrVersion)
 	} else {
-		log.Println("[INFO] Starting atomstr v", atomstrversion)
-		// slog.Info("Starting atomstr v", atomstrversion)
+		log.Println("[INFO] Starting atomstr v", atomstrVersion)
+		// slog.Info("Starting atomstr v", atomstrVersion)
 		go a.webserver()
 
 		// first run

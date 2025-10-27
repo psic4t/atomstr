@@ -22,7 +22,7 @@ var (
 	defaultFeedImage           = getEnv("DEFAULT_FEED_IMAGE", "https://void.cat/d/NDrSDe4QMx9jh6bD9LJwcK")
 	dbPath                     = getEnv("DB_PATH", "./atomstr.db")
 	noPub, _                   = strconv.ParseBool(getEnv("NOPUB", "false"))
-	atomstrversion      string = "0.9.6"
+	atomstrVersion      string = "0.9.6"
 )
 
 type Atomstr struct {
