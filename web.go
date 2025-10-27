@@ -33,15 +33,23 @@ func (a *Atomstr) webMain(w http.ResponseWriter, r *http.Request) {
 
 func (a *Atomstr) webAdd(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("templates/add.tmpl"))
-	feedItem, err := a.addSource(r.FormValue("url"))
+	url := r.FormValue("url")
+	feedItem, err := a.addSource(url)
 
 	var status string
 	if err != nil {
 		status = "No feed found or feed already exists."
 	} else {
-		feedItem.Npub, err = nip19.EncodePublicKey(feedItem.Pub)
-		if err != nil {
-			log.Fatal("Error encoding public key:", err)
+		// If npub is provided in query params (from async redirect), use it
+		// Otherwise, calculate it from the feed
+		if npubParam := r.FormValue("npub"); npubParam != "" {
+			feedItem.Npub = npubParam
+			log.Printf("[INFO] Using npub from query parameter: %s", npubParam)
+		} else {
+			feedItem.Npub, err = nip19.EncodePublicKey(feedItem.Pub)
+			if err != nil {
+				log.Fatal("Error encoding public key:", err)
+			}
 		}
 		status = "Success! Check your feed below and open it with your preferred app."
 	}
@@ -89,6 +97,7 @@ func generateJobID() string {
 }
 
 func (a *Atomstr) webAddAsync(w http.ResponseWriter, r *http.Request) {
+	log.Printf("[INFO] webAddAsync called with method: %s", r.Method)
 	if r.Method != "POST" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -123,11 +132,13 @@ func (a *Atomstr) webAddAsync(w http.ResponseWriter, r *http.Request) {
 
 	// Return job ID immediately
 	response := asyncResponse{JobID: jobID}
+	log.Printf("[INFO] Created async job %s for URL: %s", jobID, feedURL)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
 
 func (a *Atomstr) webAddStatus(w http.ResponseWriter, r *http.Request) {
+	log.Printf("[INFO] webAddStatus called for path: %s", r.URL.Path)
 	// Extract job ID from URL path
 	pathParts := strings.Split(r.URL.Path, "/")
 	if len(pathParts) < 3 {
@@ -152,7 +163,9 @@ func (a *Atomstr) webAddStatus(w http.ResponseWriter, r *http.Request) {
 		Status:  job.Status,
 		Message: job.Message,
 		URL:     job.FeedURL,
+		Npub:    job.Npub,
 	}
+	log.Printf("[INFO] Returning status response for job %s with npub: %s", jobID, job.Npub)
 
 	if job.Error != "" {
 		response.Error = job.Error
@@ -205,6 +218,7 @@ func (a *Atomstr) processFeedAsync(job *asyncJob) {
 	if err != nil {
 		log.Fatal("Error encoding public key:", err)
 	}
+	log.Printf("[INFO] Generated npub: %s for URL: %s", feedItem.Npub, job.URL)
 
 	// Update status: saving to database
 	jobsMutex.Lock()
@@ -243,6 +257,8 @@ func (a *Atomstr) processFeedAsync(job *asyncJob) {
 	job.Status = "completed"
 	job.Message = "Feed successfully added"
 	job.FeedURL = feedItem.Url
+	job.Npub = feedItem.Npub
+	log.Printf("[INFO] Job %s completed with npub: %s", job.ID, job.Npub)
 	jobsMutex.Unlock()
 
 	// Clean up old jobs after 5 minutes

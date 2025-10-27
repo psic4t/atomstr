@@ -12,12 +12,12 @@ import (
 var (
 	fetchInterval, _           = time.ParseDuration(getEnv("FETCH_INTERVAL", "15m"))
 	metadataInterval, _        = time.ParseDuration(getEnv("METADATA_INTERVAL", "12h"))
-	historyInterval, _         = time.ParseDuration(getEnv("HISTORY_INTERVAL", "2h"))
+	historyInterval, _         = time.ParseDuration(getEnv("HISTORY_INTERVAL", "1h"))
 	logLevel                   = getEnv("LOG_LEVEL", "DEBUG")
 	webserverPort              = getEnv("WEBSERVER_PORT", "8061")
 	nip05Domain                = getEnv("NIP05_DOMAIN", "atomstr.data.haus")
 	maxWorkers, _              = strconv.Atoi(getEnv("MAX_WORKERS", "5"))
-	r                          = getEnv("RELAYS_TO_PUBLISH_TO", "wss://nostr.data.haus, wss://nos.lol, wss://relay.damus.io")
+	r                          = getEnv("RELAYS_TO_PUBLISH_TO", "wss://nostr.data.haus")
 	relaysToPublishTo          = strings.Split(r, ", ")
 	defaultFeedImage           = getEnv("DEFAULT_FEED_IMAGE", "https://upload.wikimedia.org/wikipedia/en/thumb/4/43/Feed-icon.svg/256px-Feed-icon.svg.png")
 	dbPath                     = getEnv("DB_PATH", "./atomstr.db")
@@ -66,6 +66,7 @@ type asyncJob struct {
 	Message string
 	Error   string
 	FeedURL string
+	Npub    string
 }
 
 type asyncResponse struct {
@@ -78,4 +79,5 @@ type statusResponse struct {
 	Message string `json:"message,omitempty"`
 	Error   string `json:"error,omitempty"`
 	URL     string `json:"url,omitempty"`
+	Npub    string `json:"npub,omitempty"`
 }

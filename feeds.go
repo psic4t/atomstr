@@ -252,6 +252,7 @@ func (a *Atomstr) dbGetFeed(feedUrl string) *feedStruct {
 }
 
 func checkValidFeedSource(feedUrl string) (*feedStruct, error) {
+	log.Printf("[INFO] checkValidFeedSource called for: %s", feedUrl)
 	log.Println("[DEBUG] Trying to find feed at", feedUrl)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
