@@ -198,7 +198,7 @@ func (a *Atomstr) processFeedAsync(job *asyncJob) {
 
 	// Check for existing feed
 	feedTest := a.dbGetFeed(job.URL)
-	if feedTest.Url != "" {
+	if feedTest.URL != "" {
 		jobsMutex.Lock()
 		job.Status = "failed"
 		job.Error = "Feed already exists"
@@ -211,7 +211,7 @@ func (a *Atomstr) processFeedAsync(job *asyncJob) {
 	job.Message = "Generating feed keys"
 	jobsMutex.Unlock()
 
-	feedItemKeys := generateKeysForUrl(job.URL)
+	feedItemKeys := generateKeysForURL(job.URL)
 	feedItem.Pub = feedItemKeys.Pub
 	feedItem.Sec = feedItemKeys.Sec
 	feedItem.Npub, err = nip19.EncodePublicKey(feedItem.Pub)
@@ -234,7 +234,7 @@ func (a *Atomstr) processFeedAsync(job *asyncJob) {
 	}
 
 	// Update status: publishing metadata
-	if noPub == false {
+	if !noPub {
 		jobsMutex.Lock()
 		job.Message = "Publishing feed metadata"
 		jobsMutex.Unlock()
@@ -256,7 +256,7 @@ func (a *Atomstr) processFeedAsync(job *asyncJob) {
 	jobsMutex.Lock()
 	job.Status = "completed"
 	job.Message = "Feed successfully added"
-	job.FeedURL = feedItem.Url
+	job.FeedURL = feedItem.URL
 	job.Npub = feedItem.Npub
 	log.Printf("[INFO] Job %s completed with npub: %s", job.ID, job.Npub)
 	jobsMutex.Unlock()

@@ -30,7 +30,7 @@ func (a *Atomstr) dbGetAllFeeds() (*[]feedStruct, error) {
 
 	for rows.Next() {
 		feedItem := feedStruct{}
-		if err := rows.Scan(&feedItem.Pub, &feedItem.Sec, &feedItem.Url); err != nil {
+		if err := rows.Scan(&feedItem.Pub, &feedItem.Sec, &feedItem.URL); err != nil {
 			return nil, fmt.Errorf("[ERROR] Scanning for feeds failed: %w", err)
 		}
 		feedItem.Npub, _ = nip19.EncodePublicKey(feedItem.Pub)
@@ -40,7 +40,7 @@ func (a *Atomstr) dbGetAllFeeds() (*[]feedStruct, error) {
 	return &feedItems, nil
 }
 
-// func processFeedUrl(ch chan string, wg *sync.WaitGroup, feedItem *feedStruct) {
+// func processFeedURL(ch chan string, wg *sync.WaitGroup, feedItem *feedStruct) {
 func fetchFavicon(feedURL string) string {
 	parsedURL, err := url.Parse(feedURL)
 	if err != nil {
@@ -126,16 +126,16 @@ func fetchFavicon(feedURL string) string {
 	return defaultFeedImage
 }
 
-func processFeedUrl(ch chan feedStruct, wg *sync.WaitGroup) {
+func processFeedURL(ch chan feedStruct, wg *sync.WaitGroup) {
 	for feedItem := range ch {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // fetch feeds with 10s timeout
 		fp := gofeed.NewParser()
-		feed, err := fp.ParseURLWithContext(feedItem.Url, ctx)
+		feed, err := fp.ParseURLWithContext(feedItem.URL, ctx)
 		cancel() // Cancel immediately after use
 		if err != nil {
-			log.Println("[ERROR] Can't update feed", feedItem.Url)
+			log.Println("[ERROR] Can't update feed", feedItem.URL)
 		} else {
-			log.Println("[DEBUG] Updating feed ", feedItem.Url)
+			log.Println("[DEBUG] Updating feed ", feedItem.URL)
 			// fmt.Println(feed)
 			feedItem.Title = feed.Title
 			feedItem.Description = feed.Description
@@ -143,11 +143,11 @@ func processFeedUrl(ch chan feedStruct, wg *sync.WaitGroup) {
 			if feed.Image != nil {
 				feedItem.Image = feed.Image.URL
 			} else {
-				feedItem.Image = fetchFavicon(feedItem.Url)
+				feedItem.Image = fetchFavicon(feedItem.URL)
 				if feedItem.Image == defaultFeedImage {
-					log.Println("[DEBUG] No favicon found for", feedItem.Url, "using default image")
+					log.Println("[DEBUG] No favicon found for", feedItem.URL, "using default image")
 				} else {
-					log.Println("[DEBUG] Using favicon for", feedItem.Url, ":", feedItem.Image)
+					log.Println("[DEBUG] Using favicon for", feedItem.URL, ":", feedItem.Image)
 				}
 			}
 			// feedItem.Image = feed.Image
@@ -155,7 +155,7 @@ func processFeedUrl(ch chan feedStruct, wg *sync.WaitGroup) {
 			for i := range feed.Items {
 				processFeedPost(feedItem, feed.Items[i], fetchInterval)
 			}
-			log.Println("[DEBUG] Finished updating feed ", feedItem.Url)
+			log.Println("[DEBUG] Finished updating feed ", feedItem.URL)
 		}
 	}
 	wg.Done()
@@ -171,7 +171,7 @@ func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.D
 
 	// ditch it, if no timestamp
 	if feedPost.PublishedParsed == nil {
-		log.Println("[WARN] Can't read PublishedParsed date of post from", feedItem.Url)
+		log.Println("[WARN] Can't read PublishedParsed date of post from", feedItem.URL)
 		return
 	}
 	// if time right, then push
@@ -211,7 +211,7 @@ func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.D
 			}
 		}
 
-		tags = append(tags, nostr.Tag{"proxy", feedItem.Url + `#` + url.QueryEscape(feedPost.Link), "rss"})
+		tags = append(tags, nostr.Tag{"proxy", feedItem.URL + `#` + url.QueryEscape(feedPost.Link), "rss"})
 
 		ev := nostr.Event{
 			PubKey:    feedItem.Pub,
@@ -223,41 +223,41 @@ func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.D
 
 		ev.Sign(feedItem.Sec)
 
-		if noPub == false {
+		if !noPub {
 			nostrPostItem(ev)
 		}
 	}
 }
 
 func (a *Atomstr) dbWriteFeed(feedItem *feedStruct) error {
-	_, err := a.db.Exec(`insert into feeds (pub, sec, url) values(?, ?, ?)`, feedItem.Pub, feedItem.Sec, feedItem.Url)
+	_, err := a.db.Exec(`insert into feeds (pub, sec, url) values(?, ?, ?)`, feedItem.Pub, feedItem.Sec, feedItem.URL)
 	if err != nil {
 		return fmt.Errorf("[ERROR] Can't add feed: %w", err)
 	}
 	nip19Pub, _ := nip19.EncodePublicKey(feedItem.Pub)
-	log.Println("[INFO] Added feed " + feedItem.Url + " with public key " + nip19Pub)
+	log.Println("[INFO] Added feed " + feedItem.URL + " with public key " + nip19Pub)
 	return nil
 }
 
-func (a *Atomstr) dbGetFeed(feedUrl string) *feedStruct {
+func (a *Atomstr) dbGetFeed(feedURL string) *feedStruct {
 	sqlStatement := `SELECT pub, sec, url FROM feeds WHERE url=?;`
-	row := a.db.QueryRow(sqlStatement, feedUrl)
+	row := a.db.QueryRow(sqlStatement, feedURL)
 
 	feedItem := feedStruct{}
-	err := row.Scan(&feedItem.Pub, &feedItem.Sec, &feedItem.Url)
+	err := row.Scan(&feedItem.Pub, &feedItem.Sec, &feedItem.URL)
 	if err != nil {
 		log.Println("[INFO] Feed not found in DB")
 	}
 	return &feedItem
 }
 
-func checkValidFeedSource(feedUrl string) (*feedStruct, error) {
-	log.Printf("[INFO] checkValidFeedSource called for: %s", feedUrl)
-	log.Println("[DEBUG] Trying to find feed at", feedUrl)
+func checkValidFeedSource(feedURL string) (*feedStruct, error) {
+	log.Printf("[INFO] checkValidFeedSource called for: %s", feedURL)
+	log.Println("[DEBUG] Trying to find feed at", feedURL)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	fp := gofeed.NewParser()
-	feed, err := fp.ParseURLWithContext(feedUrl, ctx)
+	feed, err := fp.ParseURLWithContext(feedURL, ctx)
 	feedItem := feedStruct{}
 
 	if err != nil {
@@ -265,18 +265,18 @@ func checkValidFeedSource(feedUrl string) (*feedStruct, error) {
 		return &feedItem, err
 	}
 	// FIXME! That needs proper error handling.
-	feedItem.Url = feedUrl
+	feedItem.URL = feedURL
 	feedItem.Title = feed.Title
 	feedItem.Description = feed.Description
 	feedItem.Link = feed.Link
 	if feed.Image != nil {
 		feedItem.Image = feed.Image.URL
 	} else {
-		feedItem.Image = fetchFavicon(feedUrl)
+		feedItem.Image = fetchFavicon(feedURL)
 		if feedItem.Image == defaultFeedImage {
-			log.Println("[DEBUG] No favicon found for", feedUrl, "using default image")
+			log.Println("[DEBUG] No favicon found for", feedURL, "using default image")
 		} else {
-			log.Println("[DEBUG] Using favicon for", feedUrl, ":", feedItem.Image)
+			log.Println("[DEBUG] Using favicon for", feedURL, ":", feedItem.Image)
 		}
 	}
 	feedItem.Posts = feed.Items
@@ -284,23 +284,23 @@ func checkValidFeedSource(feedUrl string) (*feedStruct, error) {
 	return &feedItem, err
 }
 
-func (a *Atomstr) addSource(feedUrl string) (*feedStruct, error) {
+func (a *Atomstr) addSource(feedURL string) (*feedStruct, error) {
 	// var feedElem2 *feedStruct
-	feedItem, err := checkValidFeedSource(feedUrl)
+	feedItem, err := checkValidFeedSource(feedURL)
 	// if feedItem.Title == "" {
 	if err != nil {
-		log.Println("[ERROR] No valid feed found on", feedUrl)
+		log.Println("[ERROR] No valid feed found on", feedURL)
 		return feedItem, err
 	}
 
 	// check for existing feed
-	feedTest := a.dbGetFeed(feedUrl)
-	if feedTest.Url != "" {
+	feedTest := a.dbGetFeed(feedURL)
+	if feedTest.URL != "" {
 		log.Println("[WARN] Feed already exists")
 		return feedItem, err
 	}
 
-	feedItemKeys := generateKeysForUrl(feedUrl)
+	feedItemKeys := generateKeysForURL(feedURL)
 	feedItem.Pub = feedItemKeys.Pub
 	feedItem.Sec = feedItemKeys.Sec
 	fmt.Println(feedItem.Pub)
@@ -308,7 +308,7 @@ func (a *Atomstr) addSource(feedUrl string) (*feedStruct, error) {
 	if err := a.dbWriteFeed(feedItem); err != nil {
 		return feedItem, err
 	}
-	if noPub == false {
+	if !noPub {
 		nostrUpdateFeedMetadata(feedItem)
 	}
 
@@ -321,12 +321,12 @@ func (a *Atomstr) addSource(feedUrl string) (*feedStruct, error) {
 	return feedItem, err
 }
 
-func (a *Atomstr) deleteSource(feedUrl string) error {
+func (a *Atomstr) deleteSource(feedURL string) error {
 	// check for existing feed
-	feedTest := a.dbGetFeed(feedUrl)
-	if feedTest.Url != "" {
+	feedTest := a.dbGetFeed(feedURL)
+	if feedTest.URL != "" {
 		sqlStatement := `DELETE FROM feeds WHERE url=?;`
-		_, err := a.db.Exec(sqlStatement, feedUrl)
+		_, err := a.db.Exec(sqlStatement, feedURL)
 		if err != nil {
 			return fmt.Errorf("[WARN] Can't remove feed: %w", err)
 		}
@@ -346,7 +346,7 @@ func (a *Atomstr) listFeeds() error {
 	for _, feedItem := range *feeds {
 		nip19Pub, _ := nip19.EncodePublicKey(feedItem.Pub)
 		fmt.Print(nip19Pub + " ")
-		fmt.Println(feedItem.Url)
+		fmt.Println(feedItem.URL)
 	}
 	return nil
 }

@@ -20,10 +20,7 @@ func getEnv(key, fallback string) string {
 func checkMaxAge(itemTime *time.Time, maxAgeHours time.Duration) bool {
 	maxAge := time.Now().UTC().Add(-maxAgeHours) // make sure everything is UTC!
 
-	if itemTime.UTC().After(maxAge) {
-		return true
-	}
-	return false
+	return itemTime.UTC().After(maxAge)
 }
 
 func dbInit() *sql.DB {
@@ -42,9 +39,9 @@ func dbInit() *sql.DB {
 	return db
 }
 
-func generateKeysForUrl(feedUrl string) *feedStruct {
+func generateKeysForURL(feedURL string) *feedStruct {
 	feedElem := feedStruct{}
-	feedElem.Url = feedUrl
+	feedElem.URL = feedURL
 
 	feedElem.Sec = nostr.GeneratePrivateKey() // generate new key
 	feedElem.Pub, _ = nostr.GetPublicKey(feedElem.Sec)

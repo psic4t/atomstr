@@ -12,13 +12,13 @@ import (
 )
 
 func nostrUpdateFeedMetadata(feedItem *feedStruct) {
-	//fmt.Println(feedItem)
+	// fmt.Println(feedItem)
 
 	metadata := map[string]string{
 		"name":    feedItem.Title + " (RSS Feed)",
 		"about":   feedItem.Description + "\n\n" + feedItem.Link,
 		"picture": feedItem.Image,
-		"nip05":   feedItem.Url + "@" + nip05Domain, // should this be optional?
+		"nip05":   feedItem.URL + "@" + nip05Domain, // should this be optional?
 	}
 
 	content, _ := json.Marshal(metadata)
@@ -34,14 +34,14 @@ func nostrUpdateFeedMetadata(feedItem *feedStruct) {
 	ev.Sign(feedItem.Sec)
 	log.Println("[DEBUG] Updating feed metadata for", feedItem.Title)
 
-	if noPub == false {
+	if !noPub {
 		nostrPostItem(ev)
 	}
 }
 
 func (a *Atomstr) processFeedMetadata(ch chan feedStruct, wg *sync.WaitGroup) {
 	for feedItem := range ch {
-		data, err := checkValidFeedSource(feedItem.Url)
+		data, err := checkValidFeedSource(feedItem.URL)
 		if err != nil {
 			log.Println("[ERROR] error updating feed")
 			continue
@@ -63,8 +63,8 @@ func (a *Atomstr) ALTnostrUpdateAllFeedsMetadata() error {
 
 	log.Println("[INFO] Updating feeds metadata")
 	for _, feedItem := range *feeds {
-		data, err := checkValidFeedSource(feedItem.Url)
-		//if data.Title == "" {
+		data, err := checkValidFeedSource(feedItem.URL)
+		// if data.Title == "" {
 		if err != nil {
 			log.Println("[ERROR] error updating feed")
 			continue

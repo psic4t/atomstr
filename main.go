@@ -34,7 +34,7 @@ func (a *Atomstr) startWorkers(work string) error {
 		case "metadata":
 			go a.processFeedMetadata(ch, &wg)
 		default:
-			go processFeedUrl(ch, &wg)
+			go processFeedURL(ch, &wg)
 		}
 	}
 

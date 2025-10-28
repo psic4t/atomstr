@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS feeds (
 `
 
 type feedStruct struct {
-	Url         string
+	URL         string
 	Sec         string
 	Pub         string
 	Npub        string
