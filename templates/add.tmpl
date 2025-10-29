@@ -8,13 +8,13 @@
 <br />
 <h2>{{.Status}}</h2>
 <br />
-{{if (ne .Feed.Url "")}}
+{{if (ne .Feed.URL "")}}
 <table>
 	<tbody>
 	<th>URL</th>
 	<th class="opener">Open in</th>
 		<tr>
-			<td>{{.Feed.Url}}</td>
+			<td>{{.Feed.URL}}</td>
 			<td>
 				<a href="https://snort.social/p/{{.Feed.Npub}}">Snort</a>
 				<a href="https://nostrudel.ninja/#/u/{{.Feed.Npub}}">noStrudel</a>

@@ -223,9 +223,7 @@ func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.D
 
 		ev.Sign(feedItem.Sec)
 
-		if !dryRunMode {
-			nostrPostItem(ev)
-		}
+		nostrPostItem(ev)
 	}
 }
 
