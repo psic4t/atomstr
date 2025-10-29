@@ -50,17 +50,20 @@ func (a *Atomstr) startWorkers(work string) error {
 }
 
 func main() {
-	a := &Atomstr{db: dbInit()}
-
-	logger()
-
+	dryRun := flag.Bool("dry-run", false, "Enable dry-run mode (log JSON instead of publishing to relays)")
 	feedNew := flag.String("a", "", "Add a new URL to scrape")
 	feedDelete := flag.String("d", "", "Remove a feed from db")
 	flag.Bool("l", false, "List all feeds with npubs")
 	flag.Bool("v", false, "Shows version")
 	flag.Parse()
+
+	dryRunMode = *dryRun
 	flagset := make(map[string]bool) // map for flag.Visit. get bools to determine set flags
 	flag.Visit(func(f *flag.Flag) { flagset[f.Name] = true })
+
+	a := &Atomstr{db: dbInit()}
+
+	logger()
 
 	if flagset["a"] {
 		a.addSource(*feedNew)

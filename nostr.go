@@ -34,8 +34,11 @@ func nostrUpdateFeedMetadata(feedItem *feedStruct) {
 	ev.Sign(feedItem.Sec)
 	log.Println("[DEBUG] Updating feed metadata for", feedItem.Title)
 
-	if !noPub {
+	if !dryRunMode {
 		nostrPostItem(ev)
+	} else {
+		eventJSON, _ := json.Marshal(ev)
+		log.Println("[DRY-RUN] Would publish metadata event:", string(eventJSON))
 	}
 }
 
@@ -80,6 +83,12 @@ func (a *Atomstr) ALTnostrUpdateAllFeedsMetadata() error {
 }
 
 func nostrPostItem(ev nostr.Event) {
+	if dryRunMode {
+		eventJSON, _ := json.Marshal(ev)
+		log.Println("[DRY-RUN] Would publish event to relays:", string(eventJSON))
+		return
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 

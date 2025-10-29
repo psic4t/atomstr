@@ -223,7 +223,7 @@ func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.D
 
 		ev.Sign(feedItem.Sec)
 
-		if !noPub {
+		if !dryRunMode {
 			nostrPostItem(ev)
 		}
 	}
@@ -308,7 +308,7 @@ func (a *Atomstr) addSource(feedURL string) (*feedStruct, error) {
 	if err := a.dbWriteFeed(feedItem); err != nil {
 		return feedItem, err
 	}
-	if !noPub {
+	if !dryRunMode {
 		nostrUpdateFeedMetadata(feedItem)
 	}
 

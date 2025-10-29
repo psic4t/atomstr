@@ -21,7 +21,7 @@ var (
 	relaysToPublishTo          = strings.Split(r, ", ")
 	defaultFeedImage           = getEnv("DEFAULT_FEED_IMAGE", "https://upload.wikimedia.org/wikipedia/en/thumb/4/43/Feed-icon.svg/256px-Feed-icon.svg.png")
 	dbPath                     = getEnv("DB_PATH", "./atomstr.db")
-	noPub, _                   = strconv.ParseBool(getEnv("NOPUB", "false"))
+	dryRunMode                 = false
 	atomstrVersion      string = "0.9.6"
 )
 

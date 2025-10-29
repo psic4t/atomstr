@@ -234,11 +234,15 @@ func (a *Atomstr) processFeedAsync(job *asyncJob) {
 	}
 
 	// Update status: publishing metadata
-	if !noPub {
+	if !dryRunMode {
 		jobsMutex.Lock()
 		job.Message = "Publishing feed metadata"
 		jobsMutex.Unlock()
 		nostrUpdateFeedMetadata(feedItem)
+	} else {
+		jobsMutex.Lock()
+		job.Message = "Dry-run mode: would publish feed metadata"
+		jobsMutex.Unlock()
 	}
 
 	// Update status: processing history
