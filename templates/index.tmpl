@@ -14,10 +14,11 @@
 </p>
 <br />
 
-<h2>Add a new feed</h2>
+<h2>Search or add a feed</h2>
 <form class="addfeed" id="addFeedForm" action="/add" method="POST">
-<input class="input" id="feedUrl" name="url" type="url" placeholder="https://example.com/feed" required>
-<input type="submit" value="Add Feed">
+<input class="input search-input" id="feedUrl" name="url" type="url" placeholder="Search feeds or add new URL..." required>
+<input type="submit" id="addFeedBtn" value="Add Feed" style="display: none;">
+<div id="searchResults" class="search-results"></div>
 </form>
 
 <br />
@@ -65,6 +66,53 @@
 </div>
 
 <script>
+// Store all feeds data for search functionality
+const allFeeds = [
+{{range .Feeds}}
+	{url: "{{.URL}}", state: "{{.State}}", npub: "{{.Npub}}"},
+{{end}}
+];
+
+// Search functionality
+document.getElementById('feedUrl').addEventListener('input', function(e) {
+	const searchTerm = e.target.value.trim().toLowerCase();
+	const addFeedBtn = document.getElementById('addFeedBtn');
+	const searchResults = document.getElementById('searchResults');
+	const feedRows = document.querySelectorAll('tr.feed-active, tr.feed-broken');
+	
+	if (searchTerm === '') {
+		// Show all feeds, hide add button
+		feedRows.forEach(row => row.style.display = '');
+		addFeedBtn.style.display = 'none';
+		searchResults.innerHTML = '';
+		return;
+	}
+	
+	let hasMatches = false;
+	const matchingFeeds = [];
+	
+	// Filter feeds based on search term
+	feedRows.forEach((row, index) => {
+		const feedUrl = allFeeds[index]?.url || '';
+		if (feedUrl.toLowerCase().includes(searchTerm)) {
+			row.style.display = '';
+			hasMatches = true;
+			matchingFeeds.push(allFeeds[index]);
+		} else {
+			row.style.display = 'none';
+		}
+	});
+	
+	// Show/hide add button based on matches
+	if (hasMatches) {
+		addFeedBtn.style.display = 'none';
+		searchResults.innerHTML = `<div class="search-info">Found ${matchingFeeds.length} matching feed${matchingFeeds.length !== 1 ? 's' : ''}</div>`;
+	} else {
+		addFeedBtn.style.display = 'inline-block';
+		searchResults.innerHTML = '<div class="search-info no-results">No matching feeds found. Click "Add Feed" to add this URL.</div>';
+	}
+});
+
 document.getElementById('addFeedForm').addEventListener('submit', async function(e) {
 	e.preventDefault();
 	
