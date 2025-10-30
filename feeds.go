@@ -20,7 +20,7 @@ import (
 )
 
 func (a *Atomstr) dbGetAllFeeds() (*[]feedStruct, error) {
-	sqlStatement := `SELECT pub, sec, url FROM feeds`
+	sqlStatement := `SELECT pub, sec, url, state, failure_count, last_success, last_failure FROM feeds`
 	rows, err := a.db.Query(sqlStatement)
 	if err != nil {
 		return nil, fmt.Errorf("[ERROR] Returning feeds from DB failed: %w", err)
@@ -30,7 +30,7 @@ func (a *Atomstr) dbGetAllFeeds() (*[]feedStruct, error) {
 
 	for rows.Next() {
 		feedItem := feedStruct{}
-		if err := rows.Scan(&feedItem.Pub, &feedItem.Sec, &feedItem.URL); err != nil {
+		if err := rows.Scan(&feedItem.Pub, &feedItem.Sec, &feedItem.URL, &feedItem.State, &feedItem.FailureCount, &feedItem.LastSuccess, &feedItem.LastFailure); err != nil {
 			return nil, fmt.Errorf("[ERROR] Scanning for feeds failed: %w", err)
 		}
 		feedItem.Npub, _ = nip19.EncodePublicKey(feedItem.Pub)
@@ -128,14 +128,40 @@ func fetchFavicon(feedURL string) string {
 
 func processFeedURL(ch chan feedStruct, wg *sync.WaitGroup) {
 	for feedItem := range ch {
+		// Get the Atomstr instance to check state and update database
+		a := &Atomstr{db: dbInit()}
+
+		// Check if we should fetch this feed
+		if !a.shouldFetchFeed(feedItem) {
+			log.Printf("[DEBUG] Skipping broken feed %s (last failure: %v)", feedItem.URL, feedItem.LastFailure)
+			a.db.Close()
+			wg.Done()
+			continue
+		}
+
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // fetch feeds with 10s timeout
 		fp := gofeed.NewParser()
 		feed, err := fp.ParseURLWithContext(feedItem.URL, ctx)
 		cancel() // Cancel immediately after use
+
 		if err != nil {
 			log.Println("[ERROR] Can't update feed", feedItem.URL)
+
+			// Update failure state
+			newFailureCount := feedItem.FailureCount + 1
+			newState := "active"
+			if newFailureCount >= maxFailureAttempts {
+				newState = "broken"
+				log.Printf("[WARN] Feed %s marked as broken after %d failures", feedItem.URL, newFailureCount)
+			}
+			now := time.Now()
+			a.dbUpdateFeedState(feedItem.URL, newState, newFailureCount, feedItem.LastSuccess, &now)
 		} else {
 			log.Println("[DEBUG] Updating feed ", feedItem.URL)
+
+			// Reset state on successful fetch
+			a.dbResetFeedState(feedItem.URL)
+
 			// fmt.Println(feed)
 			feedItem.Title = feed.Title
 			feedItem.Description = feed.Description
@@ -157,6 +183,8 @@ func processFeedURL(ch chan feedStruct, wg *sync.WaitGroup) {
 			}
 			log.Println("[DEBUG] Finished updating feed ", feedItem.URL)
 		}
+
+		a.db.Close()
 	}
 	wg.Done()
 }
@@ -229,7 +257,8 @@ func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.D
 }
 
 func (a *Atomstr) dbWriteFeed(feedItem *feedStruct) error {
-	_, err := a.db.Exec(`insert into feeds (pub, sec, url) values(?, ?, ?)`, feedItem.Pub, feedItem.Sec, feedItem.URL)
+	_, err := a.db.Exec(`insert into feeds (pub, sec, url, state, failure_count, last_success, last_failure) values(?, ?, ?, ?, ?, ?, ?)`,
+		feedItem.Pub, feedItem.Sec, feedItem.URL, feedItem.State, feedItem.FailureCount, feedItem.LastSuccess, feedItem.LastFailure)
 	if err != nil {
 		return fmt.Errorf("[ERROR] Can't add feed: %w", err)
 	}
@@ -239,11 +268,11 @@ func (a *Atomstr) dbWriteFeed(feedItem *feedStruct) error {
 }
 
 func (a *Atomstr) dbGetFeed(feedURL string) *feedStruct {
-	sqlStatement := `SELECT pub, sec, url FROM feeds WHERE url=?;`
+	sqlStatement := `SELECT pub, sec, url, state, failure_count, last_success, last_failure FROM feeds WHERE url=?;`
 	row := a.db.QueryRow(sqlStatement, feedURL)
 
 	feedItem := feedStruct{}
-	err := row.Scan(&feedItem.Pub, &feedItem.Sec, &feedItem.URL)
+	err := row.Scan(&feedItem.Pub, &feedItem.Sec, &feedItem.URL, &feedItem.State, &feedItem.FailureCount, &feedItem.LastSuccess, &feedItem.LastFailure)
 	if err != nil {
 		log.Println("[INFO] Feed not found in DB")
 	}
@@ -280,6 +309,12 @@ func checkValidFeedSource(feedURL string) (*feedStruct, error) {
 	}
 	feedItem.Posts = feed.Items
 
+	// Initialize state fields
+	feedItem.State = "active"
+	feedItem.FailureCount = 0
+	feedItem.LastSuccess = nil
+	feedItem.LastFailure = nil
+
 	return &feedItem, err
 }
 
@@ -302,6 +337,14 @@ func (a *Atomstr) addSource(feedURL string) (*feedStruct, error) {
 	feedItemKeys := generateKeysForURL(feedURL)
 	feedItem.Pub = feedItemKeys.Pub
 	feedItem.Sec = feedItemKeys.Sec
+
+	// Initialize state fields for new feeds
+	feedItem.State = "active"
+	feedItem.FailureCount = 0
+	now := time.Now()
+	feedItem.LastSuccess = &now
+	feedItem.LastFailure = nil
+
 	fmt.Println(feedItem.Pub)
 
 	if err := a.dbWriteFeed(feedItem); err != nil {
@@ -345,7 +388,39 @@ func (a *Atomstr) listFeeds() error {
 	for _, feedItem := range *feeds {
 		nip19Pub, _ := nip19.EncodePublicKey(feedItem.Pub)
 		fmt.Print(nip19Pub + " ")
-		fmt.Println(feedItem.URL)
+		fmt.Print(feedItem.URL)
+		if feedItem.State != "active" {
+			fmt.Printf(" [%s, failures: %d]", feedItem.State, feedItem.FailureCount)
+		}
+		fmt.Println()
 	}
 	return nil
+}
+
+func (a *Atomstr) dbUpdateFeedState(feedURL string, state string, failureCount int, lastSuccess *time.Time, lastFailure *time.Time) error {
+	_, err := a.db.Exec(`UPDATE feeds SET state = ?, failure_count = ?, last_success = ?, last_failure = ? WHERE url = ?`,
+		state, failureCount, lastSuccess, lastFailure, feedURL)
+	if err != nil {
+		return fmt.Errorf("[ERROR] Can't update feed state: %w", err)
+	}
+	return nil
+}
+
+func (a *Atomstr) dbResetFeedState(feedURL string) error {
+	now := time.Now()
+	return a.dbUpdateFeedState(feedURL, "active", 0, &now, nil)
+}
+
+func (a *Atomstr) shouldFetchFeed(feedItem feedStruct) bool {
+	if feedItem.State != "broken" {
+		return true
+	}
+
+	// For broken feeds, only try once a day
+	if feedItem.LastFailure != nil {
+		timeSinceFailure := time.Since(*feedItem.LastFailure)
+		return timeSinceFailure >= brokenFeedRetryInterval
+	}
+
+	return true
 }

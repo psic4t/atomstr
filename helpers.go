@@ -39,7 +39,39 @@ func dbInit() *sql.DB {
 		log.Printf("%q: %s\n", err, sqlInit)
 	}
 
+	// Migrate existing databases to add new columns
+	migrateDB(db)
+
 	return db
+}
+
+func migrateDB(db *sql.DB) {
+	// Check if state column exists
+	var stateExists bool
+	err := db.QueryRow(`
+		SELECT COUNT(*) > 0 
+		FROM pragma_table_info('feeds') 
+		WHERE name = 'state'
+	`).Scan(&stateExists)
+	if err != nil {
+		log.Printf("[WARN] Failed to check for state column: %v", err)
+		return
+	}
+
+	if !stateExists {
+		log.Println("[INFO] Migrating database: adding state tracking columns")
+		_, err := db.Exec(`
+			ALTER TABLE feeds ADD COLUMN state TEXT DEFAULT 'active';
+			ALTER TABLE feeds ADD COLUMN failure_count INTEGER DEFAULT 0;
+			ALTER TABLE feeds ADD COLUMN last_success DATETIME;
+			ALTER TABLE feeds ADD COLUMN last_failure DATETIME;
+		`)
+		if err != nil {
+			log.Printf("[ERROR] Failed to migrate database: %v", err)
+		} else {
+			log.Println("[INFO] Database migration completed successfully")
+		}
+	}
 }
 
 func generateKeysForURL(feedURL string) *feedStruct {

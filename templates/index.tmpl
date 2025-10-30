@@ -27,8 +27,17 @@
 	<th>URL</th>
 	<th class="opener">Open in</th>
 	{{range .Feeds}}
-		<tr>
-			<td>{{.URL}}</td>
+		<tr class="feed-{{.State}}">
+			<td>
+				{{.URL}}
+				{{if eq .State "broken"}}
+					<span class="feed-state-indicator state-broken">✗ Broken ({{.FailureCount}} failures)</span>
+				{{else if gt .FailureCount 0}}
+					<span class="feed-state-indicator state-warning">⚠ {{.FailureCount}} failures</span>
+				{{else}}
+					<span class="feed-state-indicator state-active">✓ Active</span>
+				{{end}}
+			</td>
 			<td>
 				<a href="https://snort.social/p/{{.Npub}}">Snort</a>
 				<a href="https://nostrudel.ninja/#/u/{{.Npub}}">noStrudel</a>

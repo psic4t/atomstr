@@ -10,19 +10,21 @@ import (
 )
 
 var (
-	fetchInterval, _           = time.ParseDuration(getEnv("FETCH_INTERVAL", "15m"))
-	metadataInterval, _        = time.ParseDuration(getEnv("METADATA_INTERVAL", "12h"))
-	historyInterval, _         = time.ParseDuration(getEnv("HISTORY_INTERVAL", "1h"))
-	logLevel                   = getEnv("LOG_LEVEL", "DEBUG")
-	webserverPort              = getEnv("WEBSERVER_PORT", "8061")
-	nip05Domain                = getEnv("NIP05_DOMAIN", "atomstr.data.haus")
-	maxWorkers, _              = strconv.Atoi(getEnv("MAX_WORKERS", "5"))
-	r                          = getEnv("RELAYS_TO_PUBLISH_TO", "wss://nostr.data.haus")
-	relaysToPublishTo          = strings.Split(r, ", ")
-	defaultFeedImage           = getEnv("DEFAULT_FEED_IMAGE", "https://upload.wikimedia.org/wikipedia/en/thumb/4/43/Feed-icon.svg/256px-Feed-icon.svg.png")
-	dbPath                     = getEnv("DB_PATH", "./atomstr.db")
-	dryRunMode                 = false
-	atomstrVersion      string = "0.9.9"
+	fetchInterval, _                  = time.ParseDuration(getEnv("FETCH_INTERVAL", "15m"))
+	metadataInterval, _               = time.ParseDuration(getEnv("METADATA_INTERVAL", "12h"))
+	historyInterval, _                = time.ParseDuration(getEnv("HISTORY_INTERVAL", "1h"))
+	logLevel                          = getEnv("LOG_LEVEL", "DEBUG")
+	webserverPort                     = getEnv("WEBSERVER_PORT", "8061")
+	nip05Domain                       = getEnv("NIP05_DOMAIN", "atomstr.data.haus")
+	maxWorkers, _                     = strconv.Atoi(getEnv("MAX_WORKERS", "5"))
+	r                                 = getEnv("RELAYS_TO_PUBLISH_TO", "wss://nostr.data.haus")
+	relaysToPublishTo                 = strings.Split(r, ", ")
+	defaultFeedImage                  = getEnv("DEFAULT_FEED_IMAGE", "https://upload.wikimedia.org/wikipedia/en/thumb/4/43/Feed-icon.svg/256px-Feed-icon.svg.png")
+	dbPath                            = getEnv("DB_PATH", "./atomstr.db")
+	maxFailureAttempts, _             = strconv.Atoi(getEnv("MAX_FAILURE_ATTEMPTS", "3"))
+	brokenFeedRetryInterval, _        = time.ParseDuration(getEnv("BROKEN_FEED_RETRY_INTERVAL", "24h"))
+	dryRunMode                        = false
+	atomstrVersion             string = "0.9.9"
 )
 
 type Atomstr struct {
@@ -33,20 +35,28 @@ var sqlInit = `
 CREATE TABLE IF NOT EXISTS feeds (
 	pub VARCHAR(64) PRIMARY KEY,
 	sec VARCHAR(64) NOT NULL,
-	url TEXT NOT NULL
+	url TEXT NOT NULL,
+	state TEXT DEFAULT 'active',
+	failure_count INTEGER DEFAULT 0,
+	last_success DATETIME,
+	last_failure DATETIME
 );
 `
 
 type feedStruct struct {
-	URL         string
-	Sec         string
-	Pub         string
-	Npub        string
-	Title       string
-	Description string
-	Link        string
-	Image       string
-	Posts       []*gofeed.Item
+	URL          string
+	Sec          string
+	Pub          string
+	Npub         string
+	Title        string
+	Description  string
+	Link         string
+	Image        string
+	Posts        []*gofeed.Item
+	State        string
+	FailureCount int
+	LastSuccess  *time.Time
+	LastFailure  *time.Time
 }
 
 type webIndex struct {

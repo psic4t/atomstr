@@ -184,3 +184,36 @@ td {
 	border-left: 4px solid #d32f2f;
 }
 
+/* Feed state styles */
+.feed-active {
+	color: inherit;
+}
+
+.feed-broken {
+	color: #999;
+	font-style: italic;
+	opacity: 0.7;
+}
+
+.feed-broken:hover {
+	color: #666;
+	opacity: 1;
+}
+
+.feed-state-indicator {
+	font-size: 0.8em;
+	margin-left: 0.5rem;
+}
+
+.state-active {
+	color: #4caf50;
+}
+
+.state-broken {
+	color: #f44336;
+}
+
+.state-warning {
+	color: #ff9800;
+}
+
