@@ -1,4 +1,1 @@
-# mucho mucho
-
-* fix entries with no publishedParsed date
 * regression: long time on adding feed due to history fetching

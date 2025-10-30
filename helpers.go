@@ -98,7 +98,7 @@ func getDateFormats() []string {
 func parseFeedDate(feedPost *gofeed.Item) (*time.Time, error) {
 	// Primary: PublishedParsed
 	if feedPost.PublishedParsed != nil {
-		log.Printf("[DEBUG] Using PublishedParsed date for %s", feedPost.Title)
+		// log.Printf("[DEBUG] Using PublishedParsed date for %s", feedPost.Title)
 		return feedPost.PublishedParsed, nil
 	}
 
