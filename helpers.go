@@ -2,11 +2,14 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/logutils"
+	"github.com/mmcdole/gofeed"
 	"github.com/nbd-wtf/go-nostr"
 )
 
@@ -56,4 +59,78 @@ func logger() {
 		Writer:   os.Stderr,
 	}
 	log.SetOutput(filter)
+}
+
+// getDateFormats returns the list of date formats to try when parsing feed dates
+// Can be customized via ATOMSTR_DATE_FORMATS environment variable (comma-separated)
+func getDateFormats() []string {
+	// Default date formats for RSS/Atom feeds
+	defaultFormats := []string{
+		time.RFC1123Z,                    // "Mon, 02 Jan 2006 15:04:05 -0700"
+		time.RFC1123,                     // "Mon, 02 Jan 2006 15:04:05 MST"
+		time.RFC822,                      // "02 Jan 06 15:04 MST"
+		time.RFC822Z,                     // "02 Jan 06 15:04 -0700"
+		time.RFC3339,                     // "2006-01-02T15:04:05Z07:00"
+		time.RFC3339Nano,                 // "2006-01-02T15:04:05.999999999Z07:00"
+		"2006-01-02T15:04:05Z",           // ISO8601 UTC
+		"2006-01-02T15:04:05-07:00",      // ISO8601 with timezone
+		"2006-01-02 15:04:05",            // Simple datetime
+		"2006-01-02",                     // Date only
+		"Mon, 2 Jan 2006 15:04:05 -0700", // RSS without leading zero
+		"Mon, 2 Jan 2006 15:04:05 MST",   // RSS without leading zero
+	}
+
+	// Check for custom date formats from environment
+	if customFormats := os.Getenv("ATOMSTR_DATE_FORMATS"); customFormats != "" {
+		formats := strings.Split(customFormats, ",")
+		for i, format := range formats {
+			formats[i] = strings.TrimSpace(format)
+		}
+		log.Printf("[INFO] Using %d custom date formats from environment", len(formats))
+		return formats
+	}
+
+	return defaultFormats
+}
+
+// parseFeedDate attempts to parse date from feed item with fallbacks
+// Order: PublishedParsed -> UpdatedParsed -> Published string -> Updated string
+func parseFeedDate(feedPost *gofeed.Item) (*time.Time, error) {
+	// Primary: PublishedParsed
+	if feedPost.PublishedParsed != nil {
+		log.Printf("[DEBUG] Using PublishedParsed date for %s", feedPost.Title)
+		return feedPost.PublishedParsed, nil
+	}
+
+	// Fallback 1: UpdatedParsed
+	if feedPost.UpdatedParsed != nil {
+		log.Printf("[DEBUG] Using UpdatedParsed date for %s", feedPost.Title)
+		return feedPost.UpdatedParsed, nil
+	}
+
+	dateFormats := getDateFormats()
+
+	// Fallback 2: Published string
+	if feedPost.Published != "" {
+		for _, format := range dateFormats {
+			if parsedTime, err := time.Parse(format, feedPost.Published); err == nil {
+				log.Printf("[DEBUG] Parsed Published string '%s' using format '%s' for %s", feedPost.Published, format, feedPost.Title)
+				return &parsedTime, nil
+			}
+		}
+		log.Printf("[WARN] Failed to parse Published string '%s' for %s", feedPost.Published, feedPost.Title)
+	}
+
+	// Fallback 3: Updated string
+	if feedPost.Updated != "" {
+		for _, format := range dateFormats {
+			if parsedTime, err := time.Parse(format, feedPost.Updated); err == nil {
+				log.Printf("[DEBUG] Parsed Updated string '%s' using format '%s' for %s", feedPost.Updated, format, feedPost.Title)
+				return &parsedTime, nil
+			}
+		}
+		log.Printf("[WARN] Failed to parse Updated string '%s' for %s", feedPost.Updated, feedPost.Title)
+	}
+
+	return nil, fmt.Errorf("no valid date found in feed item")
 }

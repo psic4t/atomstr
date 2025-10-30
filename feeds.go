@@ -169,13 +169,14 @@ func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.D
 
 	// fmt.Println(feedPost.PublishedParsed)
 
-	// ditch it, if no timestamp
-	if feedPost.PublishedParsed == nil {
-		log.Println("[WARN] Can't read PublishedParsed date of post from", feedItem.URL)
+	// Parse date with fallbacks
+	itemTime, err := parseFeedDate(feedPost)
+	if err != nil {
+		log.Printf("[WARN] Can't parse any date from post from %s: %v", feedItem.URL, err)
 		return
 	}
 	// if time right, then push
-	if checkMaxAge(feedPost.PublishedParsed, interval) {
+	if checkMaxAge(itemTime, interval) {
 		var feedText string
 		re := regexp.MustCompile(`nitter|telegram`)
 		if re.MatchString(feedPost.Link) { // fix duplicated title in nitter/telegram
