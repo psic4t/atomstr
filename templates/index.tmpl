@@ -20,8 +20,10 @@
 
 <h2>Search or add a feed</h2>
 <form class="addfeed" id="addFeedForm" action="/add" method="POST">
+<div class="addfeed-input-row">
 <input class="input search-input" id="feedUrl" name="url" type="url" placeholder="Search feeds or add new URL..." required>
 <input type="submit" id="addFeedBtn" value="Add Feed" style="display: none;">
+</div>
 <div id="searchResults" class="search-results"></div>
 </form>
 
@@ -113,6 +115,7 @@ document.getElementById('feedUrl').addEventListener('input', function(e) {
 		// Show all feeds, hide add button
 		feedRows.forEach(row => row.style.display = '');
 		addFeedBtn.style.display = 'none';
+		document.getElementById('addFeedForm').classList.remove('with-button');
 		searchResults.innerHTML = '';
 		return;
 	}
@@ -135,9 +138,11 @@ document.getElementById('feedUrl').addEventListener('input', function(e) {
 	// Show/hide add button based on matches
 	if (hasMatches) {
 		addFeedBtn.style.display = 'none';
+		document.getElementById('addFeedForm').classList.remove('with-button');
 		searchResults.innerHTML = `<div class="search-info">Found ${matchingFeeds.length} matching feed${matchingFeeds.length !== 1 ? 's' : ''}</div>`;
 	} else {
 		addFeedBtn.style.display = 'inline-block';
+		document.getElementById('addFeedForm').classList.add('with-button');
 		searchResults.innerHTML = '<div class="search-info no-results">No matching feeds found. Click "Add Feed" to add this URL.</div>';
 	}
 });

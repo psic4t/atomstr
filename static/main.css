@@ -141,6 +141,35 @@ td {
 	width: 80%;
 }
 
+.addfeed {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.addfeed-input-row {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.search-input {
+	flex: 1;
+	width: 100%;
+	transition: all 0.3s ease;
+	box-sizing: border-box;
+}
+
+.addfeed.with-button .addfeed-input-row .search-input {
+	flex: 1;
+}
+
+.addfeed.with-button .addfeed-input-row {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	width: 100%;
+}
+
 .search-input {
 	font-size: 1.1em;
 	padding: 0.8rem;
@@ -183,7 +212,8 @@ td {
 	cursor: pointer;
 	font-size: 1em;
 	transition: background-color 0.3s ease;
-	margin-top: 0.5rem;
+	height: 100%;
+	box-sizing: border-box;
 }
 
 #addFeedBtn:hover {
