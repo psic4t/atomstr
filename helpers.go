@@ -31,7 +31,7 @@ func dbInit() *sql.DB {
 	if err != nil {
 		log.Fatalf("[FATAL] open db: %v", err)
 	}
-	log.Printf("[INFO] database opened at %s", dbPath)
+	log.Printf("[DEBUG] database opened at %s", dbPath)
 	// defer db.Close()
 
 	_, err = db.Exec(sqlInit)
