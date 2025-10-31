@@ -212,7 +212,7 @@ func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.D
 	log.Printf("[DEBUG] Parsed itemTime: %v", itemTime)
 	log.Printf("[DEBUG] Current time: %v", time.Now().UTC())
 	log.Printf("[DEBUG] Interval: %v", interval)
-	log.Printf("[DEBUG] checkMaxAge result: %v", checkMaxAge(itemTime, interval))
+	log.Printf("[INFO] checkMaxAge result: %v", checkMaxAge(itemTime, interval))
 
 	// if time right, then push
 	if checkMaxAge(itemTime, interval) {
