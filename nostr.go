@@ -100,7 +100,7 @@ func nostrPostItem(ev nostr.Event) {
 		}
 		err = relay.Publish(ctx, ev)
 		if err != nil {
-			log.Println("[ERROR]", url, err)
+			log.Println("[WARN]", url, err)
 			continue
 		}
 
