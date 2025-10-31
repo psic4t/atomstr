@@ -135,7 +135,7 @@ func processFeedURL(ch chan feedStruct, wg *sync.WaitGroup) {
 		if !a.shouldFetchFeed(feedItem) {
 			log.Printf("[DEBUG] Skipping broken feed %s (last failure: %v)", feedItem.URL, feedItem.LastFailure)
 			a.db.Close()
-			wg.Done()
+			// wg.Done() # not anymore? fix negative wg counter
 			continue
 		}
 
