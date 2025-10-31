@@ -141,6 +141,7 @@ func processFeedURL(ch chan feedStruct, wg *sync.WaitGroup) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // fetch feeds with 10s timeout
 		fp := gofeed.NewParser()
+		fp.UserAgent = "atomstr/" + atomstrVersion
 		feed, err := fp.ParseURLWithContext(feedItem.URL, ctx)
 		cancel() // Cancel immediately after use
 
@@ -296,6 +297,7 @@ func checkValidFeedSource(feedURL string) (*feedStruct, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	fp := gofeed.NewParser()
+	fp.UserAgent = "atomstr/" + atomstrVersion
 	feed, err := fp.ParseURLWithContext(feedURL, ctx)
 	feedItem := feedStruct{}
 

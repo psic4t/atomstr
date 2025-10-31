@@ -24,7 +24,7 @@ var (
 	maxFailureAttempts, _             = strconv.Atoi(getEnv("MAX_FAILURE_ATTEMPTS", "3"))
 	brokenFeedRetryInterval, _        = time.ParseDuration(getEnv("BROKEN_FEED_RETRY_INTERVAL", "24h"))
 	dryRunMode                        = false
-	atomstrVersion             string = "0.9.11"
+	atomstrVersion             string = "0.9.12"
 )
 
 type Atomstr struct {
