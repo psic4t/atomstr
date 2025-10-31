@@ -110,6 +110,6 @@ func nostrPostItem(ev nostr.Event) {
 			continue
 		}
 
-		log.Printf("[DEBUG] Event published to %s\n", url)
+		log.Printf("[INFO] Event published to %s\n", url)
 	}
 }
