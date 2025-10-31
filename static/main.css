@@ -6,6 +6,9 @@ body{
 
 #title {
 	#border-bottom: 1px dashed #00869A;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
 }
 
 #title h1>a {
@@ -26,6 +29,7 @@ body{
 	padding-bottom: 0.1em;
 	display: flex;
 	align-items: center;
+	flex: 1;
 }
 #title h1::before{
 	content: '';
@@ -104,6 +108,13 @@ img{max-width:100%;}
 }
 #main-links a {
 	margin: 0 10px;
+	font-size: 1em;
+	color: #3377AA;
+	text-decoration: none;
+}
+
+#main-links a:hover {
+	text-decoration: underline;
 }
 #all_posts{margin-top:24px;text-align:center;}
 
@@ -272,5 +283,110 @@ td {
 
 .state-warning {
 	color: #ff9800;
+}
+
+/* Statistics modal styles */
+.stats-container {
+	background: white;
+	padding: 2rem;
+	border-radius: 8px;
+	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+	max-width: 500px;
+	width: 90%;
+	position: relative;
+}
+
+.stats-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 1.5rem;
+	border-bottom: 2px solid #3377AA;
+	padding-bottom: 0.5rem;
+}
+
+.stats-header h3 {
+	margin: 0;
+	color: #3377AA;
+	font-size: 1.3em;
+}
+
+.close-btn {
+	background: none;
+	border: none;
+	font-size: 1.5rem;
+	cursor: pointer;
+	color: #666;
+	padding: 0;
+	width: 30px;
+	height: 30px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.close-btn:hover {
+	background-color: #f0f0f0;
+	color: #333;
+}
+
+.stats-content {
+	display: flex;
+	justify-content: space-around;
+	margin-bottom: 1.5rem;
+}
+
+.stat-item {
+	text-align: center;
+	flex: 1;
+	padding: 1rem;
+	border-radius: 6px;
+	background-color: #f8f9fa;
+	margin: 0 0.5rem;
+	transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-item:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.stat-number {
+	font-size: 2rem;
+	font-weight: bold;
+	color: #3377AA;
+	margin-bottom: 0.5rem;
+}
+
+.stat-label {
+	font-size: 0.9rem;
+	color: #666;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.stats-footer {
+	text-align: center;
+	color: #999;
+	border-top: 1px solid #eee;
+	padding-top: 1rem;
+}
+
+/* Responsive design for statistics */
+@media (max-width: 600px) {
+	.stats-content {
+		flex-direction: column;
+	}
+	
+	.stat-item {
+		margin: 0.5rem 0;
+	}
+	
+	.stats-container {
+		width: 95%;
+		padding: 1.5rem;
+	}
 }
 

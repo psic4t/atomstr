@@ -6,7 +6,7 @@
 <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="/static/favicon-192x192.png">
 <title>atomstr</title></head><body>
-<div id="title"><h1><img src="/static/atomstr-logo.png" alt="atomstr logo" class="logo"><a class="title" href="/">atomstr</a></h1></div>
+<div id="title"><h1><img src="/static/atomstr-logo.png" alt="atomstr logo" class="logo"><a class="title" href="/">atomstr</a></h1><div id="main-links"><a href="#" id="statsLink">☰ Statistics</a></div></div>
 <p>RSS/Atom gateway to Nostr.</p>
 
 <p>Add at least one of the following relays to read the feeds:
@@ -66,6 +66,31 @@
 		<div class="spinner-text">Adding feed...</div>
 		<div class="spinner-status" id="spinnerStatus">Validating feed URL</div>
 		<div id="errorMessage" class="error-message" style="display: none;"></div>
+	</div>
+</div>
+
+<!-- Statistics Modal -->
+<div id="statsModal" class="overlay">
+	<div class="stats-container">
+		<div class="stats-header">
+			<h3>☰ Feed Statistics</h3>
+			<button class="close-btn" id="closeStatsModal">&times;</button>
+		</div>
+		<div class="stats-content">
+			<div class="stat-item">
+				<div class="stat-number" id="totalFeeds">-</div>
+				<div class="stat-label">Total Feeds</div>
+			</div>
+			<div class="stat-item">
+				<div class="stat-number" id="failingFeeds">-</div>
+				<div class="stat-label">Failing Feeds</div>
+			</div>
+			<div class="stat-item">
+				<div class="stat-number" id="brokenFeeds">-</div>
+				<div class="stat-label">Broken Feeds</div>
+			</div>
+		</div>
+
 	</div>
 </div>
 
@@ -206,6 +231,57 @@ async function pollJobStatus(jobId) {
 	
 	await poll();
 }
+
+// Statistics modal functionality
+document.getElementById('statsLink').addEventListener('click', async function(e) {
+	e.preventDefault();
+	
+	const statsModal = document.getElementById('statsModal');
+	
+	// Show modal
+	statsModal.classList.add('active');
+	
+	// Fetch statistics
+	try {
+		const response = await fetch('/api/stats');
+		if (!response.ok) {
+			throw new Error('Failed to fetch statistics');
+		}
+		
+		const data = await response.json();
+		
+		// Update statistics display
+		document.getElementById('totalFeeds').textContent = data.total_feeds || 0;
+		document.getElementById('failingFeeds').textContent = data.failing_feeds || 0;
+		document.getElementById('brokenFeeds').textContent = data.broken_feeds || 0;
+		
+	} catch (error) {
+		console.error('Error fetching statistics:', error);
+		// Show error state
+		document.getElementById('totalFeeds').textContent = 'Error';
+		document.getElementById('failingFeeds').textContent = 'Error';
+		document.getElementById('brokenFeeds').textContent = 'Error';
+	}
+});
+
+// Close statistics modal
+document.getElementById('closeStatsModal').addEventListener('click', function() {
+	document.getElementById('statsModal').classList.remove('active');
+});
+
+// Close modal when clicking outside
+document.getElementById('statsModal').addEventListener('click', function(e) {
+	if (e.target === this) {
+		this.classList.remove('active');
+	}
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(e) {
+	if (e.key === 'Escape') {
+		document.getElementById('statsModal').classList.remove('active');
+	}
+});
 </script>
 
 </body>

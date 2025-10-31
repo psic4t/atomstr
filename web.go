@@ -61,6 +61,40 @@ func (a *Atomstr) webAdd(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, data)
 }
 
+func (a *Atomstr) webStats(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	feeds, err := a.dbGetAllFeeds()
+	if err != nil {
+		response := map[string]interface{}{
+			"error": "Failed to get feeds",
+		}
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	totalFeeds := len(*feeds)
+	brokenFeeds := 0
+	failingFeeds := 0
+
+	for _, feed := range *feeds {
+		if feed.State == "broken" {
+			brokenFeeds++
+		} else if feed.FailureCount > 0 {
+			failingFeeds++
+		}
+	}
+
+	response := map[string]interface{}{
+		"total_feeds":   totalFeeds,
+		"broken_feeds":  brokenFeeds,
+		"failing_feeds": failingFeeds,
+	}
+
+	json.NewEncoder(w).Encode(response)
+}
+
 func (a *Atomstr) webNip05(w http.ResponseWriter, r *http.Request) {
 	name := r.URL.Query().Get("name")
 	name, _ = url.QueryUnescape(name)
@@ -279,6 +313,7 @@ func (a *Atomstr) webserver() {
 	http.HandleFunc("/add", a.webAdd)
 	http.HandleFunc("/add-async", a.webAddAsync)
 	http.HandleFunc("/add-status/", a.webAddStatus)
+	http.HandleFunc("/api/stats", a.webStats)
 	http.HandleFunc("/.well-known/nostr.json", a.webNip05)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	log.Println("[INFO] Starting webserver at port", webserverPort)
