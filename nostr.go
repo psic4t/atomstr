@@ -95,12 +95,12 @@ func nostrPostItem(ev nostr.Event) {
 	for _, url := range relaysToPublishTo {
 		relay, err := nostr.RelayConnect(ctx, url)
 		if err != nil {
-			log.Println("[ERROR]", err)
+			log.Println("[ERROR]", url, err)
 			continue
 		}
 		err = relay.Publish(ctx, ev)
 		if err != nil {
-			log.Println("[ERROR]", err)
+			log.Println("[ERROR]", url, err)
 			continue
 		}
 
