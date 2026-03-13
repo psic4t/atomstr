@@ -19,6 +19,19 @@ import (
 	"github.com/nbd-wtf/go-nostr/nip19"
 )
 
+var (
+	sanitizerPolicy = func() *bluemonday.Policy {
+		p := bluemonday.StrictPolicy()
+		p.AllowImages()
+		p.AllowStandardURLs()
+		p.AllowAttrs("href").OnElements("a")
+		return p
+	}()
+	reNitterTelegram = regexp.MustCompile(`nitter|telegram`)
+	reInlineImg      = regexp.MustCompile(`<img.src="(http.*\.(jpg|png|gif)).*/>`)
+	reInlineLink     = regexp.MustCompile(`<a.href="(https.*?)" .*</a>`)
+)
+
 func (a *Atomstr) dbGetAllFeeds() (*[]feedStruct, error) {
 	sqlStatement := `SELECT pub, sec, url, state, failure_count, last_success, last_failure FROM feeds`
 	rows, err := a.db.Query(sqlStatement)
@@ -200,11 +213,6 @@ func processFeedURL(ch chan feedStruct, wg *sync.WaitGroup) {
 }
 
 func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.Duration) {
-	p := bluemonday.StrictPolicy() // initialize html sanitizer
-	p.AllowImages()
-	p.AllowStandardURLs()
-	p.AllowAttrs("href").OnElements("a")
-
 	// Debug PublishedParsed
 	log.Printf("[DEBUG] Feed: %s, Title: %s", feedItem.URL, feedPost.Title)
 	log.Printf("[DEBUG] PublishedParsed: %v", feedPost.PublishedParsed)
@@ -227,19 +235,16 @@ func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.D
 	// if time right, then push
 	if checkMaxAge(itemTime, interval) {
 		var feedText string
-		re := regexp.MustCompile(`nitter|telegram`)
-		if re.MatchString(feedPost.Link) { // fix duplicated title in nitter/telegram
-			feedText = p.Sanitize(feedPost.Description)
+		if reNitterTelegram.MatchString(feedPost.Link) { // fix duplicated title in nitter/telegram
+			feedText = sanitizerPolicy.Sanitize(feedPost.Description)
 		} else {
-			feedText = feedPost.Title + "\n\n" + p.Sanitize(feedPost.Description)
+			feedText = feedPost.Title + "\n\n" + sanitizerPolicy.Sanitize(feedPost.Description)
 		}
 		// fmt.Println(feedText)
 
-		regImg := regexp.MustCompile(`\<img.src=\"(http.*\.(jpg|png|gif)).*\/\>`) // allow inline images
-		feedText = regImg.ReplaceAllString(feedText, "$1\n")
+		feedText = reInlineImg.ReplaceAllString(feedText, "$1\n") // allow inline images
 
-		regLink := regexp.MustCompile(`\<a.href=\"(https.*?)\"\ .*\<\/a\>`) // allow inline links
-		feedText = regLink.ReplaceAllString(feedText, "$1\n")
+		feedText = reInlineLink.ReplaceAllString(feedText, "$1\n") // allow inline links
 
 		feedText = html.UnescapeString(feedText) // decode html strings
 
