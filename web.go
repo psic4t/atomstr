@@ -103,18 +103,27 @@ func (a *Atomstr) webNip05(w http.ResponseWriter, r *http.Request) {
 
 	var response []byte
 	if name != "" && name != "_" {
-		feedItem := a.dbGetFeed(name)
-
-		nip05WellKnownResponse := nip05.WellKnownResponse{
-			Names: map[string]string{
-				name: feedItem.Pub,
-			},
-			Relays: map[string][]string{
-				feedItem.Pub: relaysToPublishTo,
-			},
+		feeds, err := a.dbGetAllFeeds()
+		if err != nil {
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
 		}
-		response, _ = json.Marshal(nip05WellKnownResponse)
-		_, _ = w.Write(response)
+
+		for _, feed := range *feeds {
+			if feedURLToNip05Name(feed.URL) == name {
+				nip05WellKnownResponse := nip05.WellKnownResponse{
+					Names: map[string]string{
+						name: feed.Pub,
+					},
+					Relays: map[string][]string{
+						feed.Pub: relaysToPublishTo,
+					},
+				}
+				response, _ = json.Marshal(nip05WellKnownResponse)
+				_, _ = w.Write(response)
+				return
+			}
+		}
 	}
 }
 

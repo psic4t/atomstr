@@ -18,7 +18,7 @@ func nostrUpdateFeedMetadata(feedItem *feedStruct) {
 		"name":    feedItem.Title + " (RSS Feed)",
 		"about":   feedItem.Description + "\n\n" + feedItem.Link,
 		"picture": feedItem.Image,
-		"nip05":   feedItem.URL + "@" + nip05Domain, // should this be optional?
+		"nip05":   feedURLToNip05Name(feedItem.URL) + "@" + nip05Domain,
 	}
 
 	content, _ := json.Marshal(metadata)

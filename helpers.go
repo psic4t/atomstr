@@ -4,7 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -84,6 +86,34 @@ func migrateDB(db *sql.DB) {
 			log.Println("[INFO] Database migration completed successfully")
 		}
 	}
+}
+
+// feedURLToNip05Name converts a feed URL into a NIP-05-compliant local-part.
+// NIP-05 local-parts must only contain a-z0-9-_.
+func feedURLToNip05Name(feedURL string) string {
+	parsed, err := url.Parse(feedURL)
+	if err != nil {
+		// fallback: strip everything non-compliant
+		re := regexp.MustCompile(`[^a-z0-9._-]`)
+		return re.ReplaceAllString(strings.ToLower(feedURL), "_")
+	}
+
+	host := strings.ToLower(parsed.Host)
+	host = strings.TrimPrefix(host, "www.")
+
+	path := strings.ToLower(parsed.Path)
+	path = strings.ReplaceAll(path, "/", "_")
+
+	slug := host + path
+
+	// strip leading/trailing underscores
+	slug = strings.Trim(slug, "_")
+
+	// remove any character not in a-z0-9._-
+	re := regexp.MustCompile(`[^a-z0-9._-]`)
+	slug = re.ReplaceAllString(slug, "")
+
+	return slug
 }
 
 func generateKeysForURL(feedURL string) *feedStruct {
