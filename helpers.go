@@ -177,6 +177,7 @@ func getDateFormats() []string {
 		"2006-01-02",                     // Date only
 		"Mon, 2 Jan 2006 15:04:05 -0700", // RSS without leading zero
 		"Mon, 2 Jan 2006 15:04:05 MST",   // RSS without leading zero
+		"2 January 2006 - 15:04",         // NL Times style (day month year - time)
 	}
 
 	// Check for custom date formats from environment

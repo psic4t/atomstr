@@ -417,7 +417,7 @@ func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.D
 
 		ev := nostr.Event{
 			PubKey:    feedItem.Pub,
-			CreatedAt: nostr.Timestamp(feedPost.PublishedParsed.Unix()),
+			CreatedAt: nostr.Timestamp(itemTime.Unix()),
 			Kind:      nostr.KindTextNote,
 			Tags:      tags,
 			Content:   feedText,
