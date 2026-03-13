@@ -86,6 +86,31 @@ func migrateDB(db *sql.DB) {
 			log.Println("[INFO] Database migration completed successfully")
 		}
 	}
+
+	// Check if etag column exists
+	var etagExists bool
+	err = db.QueryRow(`
+		SELECT COUNT(*) > 0 
+		FROM pragma_table_info('feeds') 
+		WHERE name = 'etag'
+	`).Scan(&etagExists)
+	if err != nil {
+		log.Printf("[WARN] Failed to check for etag column: %v", err)
+		return
+	}
+
+	if !etagExists {
+		log.Println("[INFO] Migrating database: adding HTTP caching columns")
+		_, err := db.Exec(`
+			ALTER TABLE feeds ADD COLUMN etag TEXT DEFAULT '';
+			ALTER TABLE feeds ADD COLUMN last_modified TEXT DEFAULT '';
+		`)
+		if err != nil {
+			log.Printf("[ERROR] Failed to migrate database for caching columns: %v", err)
+		} else {
+			log.Println("[INFO] HTTP caching columns migration completed")
+		}
+	}
 }
 
 // feedURLToNip05Name converts a feed URL into a NIP-05-compliant local-part.

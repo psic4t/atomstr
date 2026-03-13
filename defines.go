@@ -58,6 +58,8 @@ type feedStruct struct {
 	FailureCount int
 	LastSuccess  *time.Time
 	LastFailure  *time.Time
+	ETag         string
+	LastModified string
 }
 
 type webIndex struct {

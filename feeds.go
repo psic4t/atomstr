@@ -33,7 +33,7 @@ var (
 )
 
 func (a *Atomstr) dbGetAllFeeds() (*[]feedStruct, error) {
-	sqlStatement := `SELECT pub, sec, url, state, failure_count, last_success, last_failure FROM feeds`
+	sqlStatement := `SELECT pub, sec, url, state, failure_count, last_success, last_failure, etag, last_modified FROM feeds`
 	rows, err := a.db.Query(sqlStatement)
 	if err != nil {
 		return nil, fmt.Errorf("[ERROR] Returning feeds from DB failed: %w", err)
@@ -43,7 +43,7 @@ func (a *Atomstr) dbGetAllFeeds() (*[]feedStruct, error) {
 
 	for rows.Next() {
 		feedItem := feedStruct{}
-		if err := rows.Scan(&feedItem.Pub, &feedItem.Sec, &feedItem.URL, &feedItem.State, &feedItem.FailureCount, &feedItem.LastSuccess, &feedItem.LastFailure); err != nil {
+		if err := rows.Scan(&feedItem.Pub, &feedItem.Sec, &feedItem.URL, &feedItem.State, &feedItem.FailureCount, &feedItem.LastSuccess, &feedItem.LastFailure, &feedItem.ETag, &feedItem.LastModified); err != nil {
 			return nil, fmt.Errorf("[ERROR] Scanning for feeds failed: %w", err)
 		}
 		feedItem.Npub, _ = nip19.EncodePublicKey(feedItem.Pub)
@@ -139,6 +139,51 @@ func fetchFavicon(feedURL string) string {
 	return defaultFeedImage
 }
 
+// fetchFeedWithCaching fetches a feed URL using HTTP conditional GET.
+// Returns the parsed feed, new ETag, new Last-Modified, whether the feed was not modified, and any error.
+func fetchFeedWithCaching(feedURL string, etag string, lastModified string) (*gofeed.Feed, string, string, bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "GET", feedURL, nil)
+	if err != nil {
+		return nil, "", "", false, err
+	}
+	req.Header.Set("User-Agent", "atomstr/"+atomstrVersion)
+	if etag != "" {
+		req.Header.Set("If-None-Match", etag)
+	}
+	if lastModified != "" {
+		req.Header.Set("If-Modified-Since", lastModified)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, "", "", false, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotModified {
+		log.Printf("[DEBUG] Feed %s not modified (304)", feedURL)
+		return nil, etag, lastModified, true, nil
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, "", "", false, fmt.Errorf("HTTP %d", resp.StatusCode)
+	}
+
+	fp := gofeed.NewParser()
+	fp.UserAgent = "atomstr/" + atomstrVersion
+	feed, err := fp.Parse(resp.Body)
+	if err != nil {
+		return nil, "", "", false, err
+	}
+
+	newETag := resp.Header.Get("ETag")
+	newLastMod := resp.Header.Get("Last-Modified")
+	return feed, newETag, newLastMod, false, nil
+}
+
 func (a *Atomstr) processFeedURL(ch chan feedStruct, wg *sync.WaitGroup) {
 	for feedItem := range ch {
 
@@ -149,11 +194,12 @@ func (a *Atomstr) processFeedURL(ch chan feedStruct, wg *sync.WaitGroup) {
 			continue
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // fetch feeds with 10s timeout
-		fp := gofeed.NewParser()
-		fp.UserAgent = "atomstr/" + atomstrVersion
-		feed, err := fp.ParseURLWithContext(feedItem.URL, ctx)
-		cancel() // Cancel immediately after use
+		feed, newETag, newLastMod, notModified, err := fetchFeedWithCaching(feedItem.URL, feedItem.ETag, feedItem.LastModified)
+
+		if notModified {
+			a.dbResetFeedState(feedItem.URL)
+			continue
+		}
 
 		if err != nil {
 			log.Println("[ERROR] Can't update feed", feedItem.URL)
@@ -180,6 +226,7 @@ func (a *Atomstr) processFeedURL(ch chan feedStruct, wg *sync.WaitGroup) {
 
 			// Reset state on successful fetch
 			a.dbResetFeedState(feedItem.URL)
+			a.dbUpdateFeedCache(feedItem.URL, newETag, newLastMod)
 
 			// fmt.Println(feed)
 			feedItem.Title = feed.Title
@@ -419,6 +466,15 @@ func (a *Atomstr) dbUpdateFeedState(feedURL string, state string, failureCount i
 func (a *Atomstr) dbResetFeedState(feedURL string) error {
 	now := time.Now()
 	return a.dbUpdateFeedState(feedURL, "active", 0, &now, nil)
+}
+
+func (a *Atomstr) dbUpdateFeedCache(feedURL string, etag string, lastModified string) error {
+	_, err := a.db.Exec(`UPDATE feeds SET etag = ?, last_modified = ? WHERE url = ?`,
+		etag, lastModified, feedURL)
+	if err != nil {
+		return fmt.Errorf("[ERROR] Can't update feed cache headers: %w", err)
+	}
+	return nil
 }
 
 func (a *Atomstr) shouldFetchFeed(feedItem feedStruct) bool {
