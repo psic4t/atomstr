@@ -50,7 +50,7 @@ func dbInit() *sql.DB {
 
 	_, err = db.Exec(sqlInit)
 	if err != nil {
-		log.Printf("%q: %s\n", err, sqlInit)
+		log.Printf("[ERROR] %q: %s\n", err, sqlInit)
 	}
 
 	// Migrate existing databases to add new columns

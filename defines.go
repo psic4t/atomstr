@@ -12,7 +12,7 @@ var (
 	fetchInterval, _                  = time.ParseDuration(getEnv("FETCH_INTERVAL", "15m"))
 	metadataInterval, _               = time.ParseDuration(getEnv("METADATA_INTERVAL", "12h"))
 	historyInterval, _                = time.ParseDuration(getEnv("HISTORY_INTERVAL", "1h"))
-	logLevel                          = getEnv("LOG_LEVEL", "DEBUG")
+	logLevel                          = getEnv("LOG_LEVEL", "INFO")
 	webserverPort                     = getEnv("WEBSERVER_PORT", "8061")
 	nip05Domain                       = getEnv("NIP05_DOMAIN", "atomstr.data.haus")
 	maxWorkers, _                     = strconv.Atoi(getEnv("MAX_WORKERS", "5"))

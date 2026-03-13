@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/nbd-wtf/go-nostr"
@@ -38,17 +39,18 @@ func nostrUpdateFeedMetadata(feedItem *feedStruct) {
 		nostrPostToRelays(ev, dedupeRelays(relaysToPublishTo, discoveryRelays, blasterRelays))
 	} else {
 		eventJSON, _ := json.Marshal(ev)
-		log.Println("[DRY-RUN] Would publish metadata event:", string(eventJSON))
+		log.Println("[DEBUG] DRY-RUN: Would publish metadata event:", string(eventJSON))
 	}
 
 	nostrPublishRelayList(feedItem)
 }
 
-func (a *Atomstr) processFeedMetadata(ch chan feedStruct, wg *sync.WaitGroup) {
+func (a *Atomstr) processFeedMetadata(ch chan feedStruct, wg *sync.WaitGroup, stats *scrapeStats) {
 	for feedItem := range ch {
 		data, err := checkValidFeedSource(feedItem.URL)
 		if err != nil {
-			log.Println("[ERROR] error updating feed")
+			log.Println("[ERROR] error updating feed metadata:", feedItem.URL)
+			atomic.AddInt64(&stats.feedsErrored, 1)
 			continue
 		}
 		feedItem.Title = data.Title
@@ -56,6 +58,7 @@ func (a *Atomstr) processFeedMetadata(ch chan feedStruct, wg *sync.WaitGroup) {
 		feedItem.Link = data.Link
 		feedItem.Image = data.Image
 		nostrUpdateFeedMetadata(&feedItem)
+		atomic.AddInt64(&stats.feedsProcessed, 1)
 	}
 	wg.Done()
 }
@@ -105,7 +108,7 @@ func nostrPublishRelayList(feedItem *feedStruct) {
 		nostrPostToRelays(ev, dedupeRelays(relaysToPublishTo, discoveryRelays, blasterRelays))
 	} else {
 		eventJSON, _ := json.Marshal(ev)
-		log.Println("[DRY-RUN] Would publish NIP-65 relay list event:", string(eventJSON))
+		log.Println("[DEBUG] DRY-RUN: Would publish NIP-65 relay list event:", string(eventJSON))
 	}
 }
 
@@ -142,7 +145,7 @@ func nostrPostToRelays(ev nostr.Event, relays []string) {
 				log.Println("[WARN]", u, err)
 				return
 			}
-			log.Printf("[INFO] Event published to %s\n", u)
+			log.Printf("[DEBUG] Event published to %s\n", u)
 		}(relayURL)
 	}
 	wg.Wait()
@@ -151,7 +154,7 @@ func nostrPostToRelays(ev nostr.Event, relays []string) {
 func nostrPostItem(ev nostr.Event) {
 	if dryRunMode {
 		eventJSON, _ := json.Marshal(ev)
-		log.Println("[DRY-RUN] Would publish event to relays:", string(eventJSON))
+		log.Println("[DEBUG] DRY-RUN: Would publish event to relays:", string(eventJSON))
 		return
 	}
 
@@ -173,7 +176,7 @@ func nostrPostItem(ev nostr.Event) {
 				log.Println("[WARN]", u, err)
 				return
 			}
-			log.Printf("[INFO] Event published to %s\n", u)
+			log.Printf("[DEBUG] Event published to %s\n", u)
 		}(relayURL)
 	}
 	wg.Wait()

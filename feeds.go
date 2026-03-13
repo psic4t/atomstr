@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/microcosm-cc/bluemonday"
@@ -67,7 +68,7 @@ func (a *Atomstr) dbGetAllFeeds() (*[]feedStruct, error) {
 	sqlStatement := `SELECT pub, sec, url, state, failure_count, last_success, last_failure, etag, last_modified FROM feeds`
 	rows, err := a.db.Query(sqlStatement)
 	if err != nil {
-		return nil, fmt.Errorf("[ERROR] Returning feeds from DB failed: %w", err)
+		return nil, fmt.Errorf("returning feeds from DB failed: %w", err)
 	}
 
 	feedItems := []feedStruct{}
@@ -75,7 +76,7 @@ func (a *Atomstr) dbGetAllFeeds() (*[]feedStruct, error) {
 	for rows.Next() {
 		feedItem := feedStruct{}
 		if err := rows.Scan(&feedItem.Pub, &feedItem.Sec, &feedItem.URL, &feedItem.State, &feedItem.FailureCount, &feedItem.LastSuccess, &feedItem.LastFailure, &feedItem.ETag, &feedItem.LastModified); err != nil {
-			return nil, fmt.Errorf("[ERROR] Scanning for feeds failed: %w", err)
+			return nil, fmt.Errorf("scanning for feeds failed: %w", err)
 		}
 		feedItem.Npub, _ = nip19.EncodePublicKey(feedItem.Pub)
 		feedItems = append(feedItems, feedItem)
@@ -215,13 +216,13 @@ func fetchFeedWithCaching(feedURL string, etag string, lastModified string) (*go
 	return feed, newETag, newLastMod, false, nil
 }
 
-func (a *Atomstr) processFeedURL(ch chan feedStruct, wg *sync.WaitGroup) {
+func (a *Atomstr) processFeedURL(ch chan feedStruct, wg *sync.WaitGroup, stats *scrapeStats) {
 	for feedItem := range ch {
 
 		// Check if we should fetch this feed
 		if !a.shouldFetchFeed(feedItem) {
-			log.Printf("[INFO] Skipping broken feed %s (last failure: %v)", feedItem.URL, feedItem.LastFailure)
-			// wg.Done() # not anymore? fix negative wg counter
+			log.Printf("[DEBUG] Skipping broken feed %s (last failure: %v)", feedItem.URL, feedItem.LastFailure)
+			atomic.AddInt64(&stats.feedsSkipped, 1)
 			continue
 		}
 
@@ -229,11 +230,14 @@ func (a *Atomstr) processFeedURL(ch chan feedStruct, wg *sync.WaitGroup) {
 
 		if notModified {
 			a.dbResetFeedState(feedItem.URL)
+			atomic.AddInt64(&stats.feedsCached, 1)
+			atomic.AddInt64(&stats.feedsProcessed, 1)
 			continue
 		}
 
 		if err != nil {
 			log.Println("[ERROR] Can't update feed", feedItem.URL)
+			atomic.AddInt64(&stats.feedsErrored, 1)
 
 			// Update failure state
 			newFailureCount := feedItem.FailureCount + 1
@@ -254,6 +258,7 @@ func (a *Atomstr) processFeedURL(ch chan feedStruct, wg *sync.WaitGroup) {
 			a.dbUpdateFeedState(feedItem.URL, newState, newFailureCount, feedItem.LastSuccess, &now)
 		} else {
 			log.Println("[DEBUG] Updating feed ", feedItem.URL)
+			atomic.AddInt64(&stats.feedsProcessed, 1)
 
 			// Reset state on successful fetch
 			a.dbResetFeedState(feedItem.URL)
@@ -276,7 +281,7 @@ func (a *Atomstr) processFeedURL(ch chan feedStruct, wg *sync.WaitGroup) {
 			// feedItem.Image = feed.Image
 
 			for i := range feed.Items {
-				processFeedPost(feedItem, feed.Items[i], fetchInterval)
+				processFeedPost(feedItem, feed.Items[i], fetchInterval, stats)
 			}
 			log.Println("[DEBUG] Finished updating feed ", feedItem.URL)
 		}
@@ -285,7 +290,7 @@ func (a *Atomstr) processFeedURL(ch chan feedStruct, wg *sync.WaitGroup) {
 	wg.Done()
 }
 
-func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.Duration) {
+func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.Duration, stats *scrapeStats) {
 	// Parse date with fallbacks
 	itemTime, err := parseFeedDate(feedPost)
 	if err != nil {
@@ -350,6 +355,9 @@ func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.D
 		ev.Sign(feedItem.Sec)
 
 		nostrPostItem(ev)
+		if stats != nil {
+			atomic.AddInt64(&stats.postsPublished, 1)
+		}
 
 		if postID != "" {
 			markPostPublished(feedItem.URL, postID)
@@ -361,7 +369,7 @@ func (a *Atomstr) dbWriteFeed(feedItem *feedStruct) error {
 	_, err := a.db.Exec(`insert into feeds (pub, sec, url, state, failure_count, last_success, last_failure) values(?, ?, ?, ?, ?, ?, ?)`,
 		feedItem.Pub, feedItem.Sec, feedItem.URL, feedItem.State, feedItem.FailureCount, feedItem.LastSuccess, feedItem.LastFailure)
 	if err != nil {
-		return fmt.Errorf("[ERROR] Can't add feed: %w", err)
+		return fmt.Errorf("can't add feed: %w", err)
 	}
 	nip19Pub, _ := nip19.EncodePublicKey(feedItem.Pub)
 	log.Println("[INFO] Added feed " + feedItem.URL + " with public key " + nip19Pub)
@@ -375,13 +383,13 @@ func (a *Atomstr) dbGetFeed(feedURL string) *feedStruct {
 	feedItem := feedStruct{}
 	err := row.Scan(&feedItem.Pub, &feedItem.Sec, &feedItem.URL, &feedItem.State, &feedItem.FailureCount, &feedItem.LastSuccess, &feedItem.LastFailure)
 	if err != nil {
-		log.Println("[INFO] Feed not found in DB")
+		log.Println("[DEBUG] Feed not found in DB")
 	}
 	return &feedItem
 }
 
 func checkValidFeedSource(feedURL string) (*feedStruct, error) {
-	log.Printf("[INFO] checkValidFeedSource called for: %s", feedURL)
+	log.Printf("[DEBUG] checkValidFeedSource called for: %s", feedURL)
 	log.Println("[DEBUG] Trying to find feed at", feedURL)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -458,7 +466,7 @@ func (a *Atomstr) addSource(feedURL string) (*feedStruct, error) {
 
 	log.Println("[INFO] Parsing post history of new feed")
 	for i := range feedItem.Posts {
-		processFeedPost(*feedItem, feedItem.Posts[i], historyInterval)
+		processFeedPost(*feedItem, feedItem.Posts[i], historyInterval, nil)
 	}
 	log.Println("[INFO] Finished parsing post history of new feed")
 
@@ -472,12 +480,12 @@ func (a *Atomstr) deleteSource(feedURL string) error {
 		sqlStatement := `DELETE FROM feeds WHERE url=?;`
 		_, err := a.db.Exec(sqlStatement, feedURL)
 		if err != nil {
-			return fmt.Errorf("[WARN] Can't remove feed: %w", err)
+			return fmt.Errorf("can't remove feed: %w", err)
 		}
 		log.Println("[INFO] feed removed")
 		return nil
 	} else {
-		return fmt.Errorf("[WARN] feed not found")
+		return fmt.Errorf("feed not found")
 	}
 }
 
@@ -503,7 +511,7 @@ func (a *Atomstr) dbUpdateFeedState(feedURL string, state string, failureCount i
 	_, err := a.db.Exec(`UPDATE feeds SET state = ?, failure_count = ?, last_success = ?, last_failure = ? WHERE url = ?`,
 		state, failureCount, lastSuccess, lastFailure, feedURL)
 	if err != nil {
-		return fmt.Errorf("[ERROR] Can't update feed state: %w", err)
+		return fmt.Errorf("can't update feed state: %w", err)
 	}
 	return nil
 }
@@ -517,7 +525,7 @@ func (a *Atomstr) dbUpdateFeedCache(feedURL string, etag string, lastModified st
 	_, err := a.db.Exec(`UPDATE feeds SET etag = ?, last_modified = ? WHERE url = ?`,
 		etag, lastModified, feedURL)
 	if err != nil {
-		return fmt.Errorf("[ERROR] Can't update feed cache headers: %w", err)
+		return fmt.Errorf("can't update feed cache headers: %w", err)
 	}
 	return nil
 }

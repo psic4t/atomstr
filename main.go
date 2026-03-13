@@ -7,11 +7,21 @@ import (
 	"os"
 	"os/signal"
 	"sync"
+
 	"syscall"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
+
+// scrapeStats tracks per-cycle scrape statistics
+type scrapeStats struct {
+	feedsProcessed int64
+	feedsCached    int64
+	feedsErrored   int64
+	feedsSkipped   int64
+	postsPublished int64
+}
 
 func (a *Atomstr) startWorkers(work string) error {
 	feeds, err := a.dbGetAllFeeds()
@@ -22,12 +32,13 @@ func (a *Atomstr) startWorkers(work string) error {
 		log.Println("[WARN] No feeds found")
 	}
 
-	log.Println("[INFO] Start", work)
+	log.Printf("[DEBUG] Start %s (%d feeds)", work, len(*feeds))
 
 	if work == "scrape" {
 		prunePublishedPosts(1 * time.Hour)
 	}
 
+	stats := &scrapeStats{}
 	ch := make(chan feedStruct)
 	wg := sync.WaitGroup{}
 
@@ -36,9 +47,9 @@ func (a *Atomstr) startWorkers(work string) error {
 		wg.Add(1)
 		switch work {
 		case "metadata":
-			go a.processFeedMetadata(ch, &wg)
+			go a.processFeedMetadata(ch, &wg, stats)
 		default:
-			go a.processFeedURL(ch, &wg)
+			go a.processFeedURL(ch, &wg, stats)
 		}
 	}
 
@@ -49,7 +60,15 @@ func (a *Atomstr) startWorkers(work string) error {
 
 	close(ch) // this will cause the workers to stop and exit their receive loop
 	wg.Wait() // make sure they all exit
-	log.Println("[INFO] Stop", work)
+
+	// Log cycle summary at INFO level
+	if work == "scrape" {
+		log.Printf("[INFO] Scrape complete: %d feeds (%d cached, %d errors, %d skipped), %d posts published",
+			stats.feedsProcessed, stats.feedsCached, stats.feedsErrored, stats.feedsSkipped, stats.postsPublished)
+	} else {
+		log.Printf("[INFO] Metadata update complete: %d feeds (%d errors)",
+			stats.feedsProcessed, stats.feedsErrored)
+	}
 	return nil
 }
 
@@ -65,9 +84,9 @@ func main() {
 	flagset := make(map[string]bool) // map for flag.Visit. get bools to determine set flags
 	flag.Visit(func(f *flag.Flag) { flagset[f.Name] = true })
 
-	a := &Atomstr{db: dbInit()}
-
 	logger()
+
+	a := &Atomstr{db: dbInit()}
 
 	if flagset["a"] {
 		a.addSource(*feedNew)

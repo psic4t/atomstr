@@ -44,7 +44,7 @@ func (a *Atomstr) webAdd(w http.ResponseWriter, r *http.Request) {
 		// Otherwise, calculate it from the feed
 		if npubParam := r.FormValue("npub"); npubParam != "" {
 			feedItem.Npub = npubParam
-			log.Printf("[INFO] Using npub from query parameter: %s", npubParam)
+			log.Printf("[DEBUG] Using npub from query parameter: %s", npubParam)
 		} else {
 			feedItem.Npub, err = nip19.EncodePublicKey(feedItem.Pub)
 			if err != nil {
@@ -140,7 +140,7 @@ func generateJobID() string {
 }
 
 func (a *Atomstr) webAddAsync(w http.ResponseWriter, r *http.Request) {
-	log.Printf("[INFO] webAddAsync called with method: %s", r.Method)
+	log.Printf("[DEBUG] webAddAsync called with method: %s", r.Method)
 	if r.Method != "POST" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -175,13 +175,13 @@ func (a *Atomstr) webAddAsync(w http.ResponseWriter, r *http.Request) {
 
 	// Return job ID immediately
 	response := asyncResponse{JobID: jobID}
-	log.Printf("[INFO] Created async job %s for URL: %s", jobID, feedURL)
+	log.Printf("[DEBUG] Created async job %s for URL: %s", jobID, feedURL)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
 
 func (a *Atomstr) webAddStatus(w http.ResponseWriter, r *http.Request) {
-	log.Printf("[INFO] webAddStatus called for path: %s", r.URL.Path)
+	log.Printf("[DEBUG] webAddStatus called for path: %s", r.URL.Path)
 	// Extract job ID from URL path
 	pathParts := strings.Split(r.URL.Path, "/")
 	if len(pathParts) < 3 {
@@ -208,7 +208,7 @@ func (a *Atomstr) webAddStatus(w http.ResponseWriter, r *http.Request) {
 		URL:     job.FeedURL,
 		Npub:    job.Npub,
 	}
-	log.Printf("[INFO] Returning status response for job %s with npub: %s", jobID, job.Npub)
+	log.Printf("[DEBUG] Returning status response for job %s with npub: %s", jobID, job.Npub)
 
 	if job.Error != "" {
 		response.Error = job.Error
@@ -261,7 +261,7 @@ func (a *Atomstr) processFeedAsync(job *asyncJob) {
 	if err != nil {
 		log.Fatal("Error encoding public key:", err)
 	}
-	log.Printf("[INFO] Generated npub: %s for URL: %s", feedItem.Npub, job.URL)
+	log.Printf("[DEBUG] Generated npub: %s for URL: %s", feedItem.Npub, job.URL)
 
 	// Update status: saving to database
 	jobsMutex.Lock()
@@ -295,7 +295,7 @@ func (a *Atomstr) processFeedAsync(job *asyncJob) {
 
 	log.Println("[INFO] Parsing post history of new feed")
 	for i := range feedItem.Posts {
-		processFeedPost(*feedItem, feedItem.Posts[i], historyInterval)
+		processFeedPost(*feedItem, feedItem.Posts[i], historyInterval, nil)
 	}
 	log.Println("[INFO] Finished parsing post history of new feed")
 
