@@ -83,13 +83,28 @@ func TestParseFeedDate(t *testing.T) {
 		t.Errorf("Expected parsed time %v, got: %v", expectedSpaceTTime, parsedTime)
 	}
 
-	// Test case 6: Feed item with no date info
+	// Test case 6: Feed item with RSS date without time (e.g. "Thu, 12 Aug 2021 UTC")
 	item6 := &gofeed.Item{
-		Title: "Test Item 6",
+		Title:     "Test Item 6",
+		Published: "Thu, 12 Aug 2021 UTC",
 	}
 
-	_, err = parseFeedDate(item6)
+	parsedTime, err = parseFeedDate(item6)
+	if err != nil {
+		t.Errorf("Expected success for item6, got error: %v", err)
+	}
+	expectedNoTime := time.Date(2021, time.August, 12, 0, 0, 0, 0, time.UTC)
+	if !parsedTime.Equal(expectedNoTime) {
+		t.Errorf("Expected parsed time %v, got: %v", expectedNoTime, parsedTime)
+	}
+
+	// Test case 7: Feed item with no date info
+	item7 := &gofeed.Item{
+		Title: "Test Item 7",
+	}
+
+	_, err = parseFeedDate(item7)
 	if err == nil {
-		t.Error("Expected error for item6 with no date info")
+		t.Error("Expected error for item7 with no date info")
 	}
 }
