@@ -35,7 +35,7 @@ func nostrUpdateFeedMetadata(feedItem *feedStruct) {
 	log.Println("[DEBUG] Updating feed metadata for", feedItem.Title)
 
 	if !dryRunMode {
-		nostrPostItem(ev)
+		nostrPostToRelays(ev, dedupeRelays(relaysToPublishTo, discoveryRelays, blasterRelays))
 	} else {
 		eventJSON, _ := json.Marshal(ev)
 		log.Println("[DRY-RUN] Would publish metadata event:", string(eventJSON))
