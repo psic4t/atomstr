@@ -14,24 +14,101 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/microcosm-cc/bluemonday"
+	"github.com/PuerkitoBio/goquery"
 	"github.com/mmcdole/gofeed"
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/nbd-wtf/go-nostr/nip19"
 )
 
 var (
-	sanitizerPolicy = func() *bluemonday.Policy {
-		p := bluemonday.StrictPolicy()
-		p.AllowImages()
-		p.AllowStandardURLs()
-		p.AllowAttrs("href").OnElements("a")
-		return p
-	}()
 	reNitterTelegram = regexp.MustCompile(`nitter|telegram`)
-	reInlineImg      = regexp.MustCompile(`<img.src="(http.*\.(jpg|png|gif)).*/>`)
-	reInlineLink     = regexp.MustCompile(`<a.href="(https.*?)" .*</a>`)
+	reMultiNewline   = regexp.MustCompile(`\n{3,}`)
+
+	// iconPatterns identifies small UI images (social buttons, icons) to strip
+	iconPatterns = []string{"icon", "button", "share", "/sd/", "logo_", "badge"}
 )
+
+// htmlToPlainText converts an HTML string into clean plain text suitable for
+// Nostr note content. It removes junk elements (social sharing blocks, iframes),
+// filters out small icon images, extracts content image URLs, converts links to
+// bare URLs, and produces properly spaced text from block-level HTML elements.
+func htmlToPlainText(rawHTML string) string {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(rawHTML))
+	if err != nil {
+		// fallback: strip all tags crudely if parsing fails
+		return html.UnescapeString(rawHTML)
+	}
+
+	// Remove junk elements
+	doc.Find(".share_submission, iframe, script, style, noscript").Remove()
+
+	// Filter icon images, keep content images inline
+	doc.Find("img").Each(func(_ int, s *goquery.Selection) {
+		src, exists := s.Attr("src")
+		if !exists || src == "" || isIconURL(src) {
+			s.Remove()
+			return
+		}
+		s.ReplaceWithHtml("\n" + src + "\n")
+	})
+
+	// Replace <a> tags with their bare href URL
+	doc.Find("a").Each(func(_ int, s *goquery.Selection) {
+		href, exists := s.Attr("href")
+		if exists && href != "" {
+			s.ReplaceWithHtml(href)
+		} else {
+			s.ReplaceWithHtml(s.Text())
+		}
+	})
+
+	// Replace <br> tags with newlines
+	doc.Find("br").Each(func(_ int, s *goquery.Selection) {
+		s.ReplaceWithHtml("\n")
+	})
+
+	// Handle list items before block elements (so <li> is processed before parent <ul>/<ol>)
+	doc.Find("li").Each(func(_ int, s *goquery.Selection) {
+		htmlContent, _ := s.Html()
+		s.ReplaceWithHtml("\n- " + htmlContent)
+	})
+
+	// Insert newline markers around block-level elements
+	blockSelectors := "p, div, h1, h2, h3, h4, h5, h6, blockquote, ul, ol, pre, hr, section, article, header, footer"
+	doc.Find(blockSelectors).Each(func(_ int, s *goquery.Selection) {
+		htmlContent, _ := s.Html()
+		s.ReplaceWithHtml("\n\n" + htmlContent + "\n\n")
+	})
+
+	// Extract text
+	text := doc.Find("body").Text()
+	if text == "" {
+		text = doc.Text()
+	}
+
+	// Decode HTML entities
+	text = html.UnescapeString(text)
+
+	// Normalize whitespace: collapse 3+ newlines to 2
+	text = reMultiNewline.ReplaceAllString(text, "\n\n")
+
+	// Trim leading/trailing whitespace
+	text = strings.TrimSpace(text)
+
+	return text
+}
+
+// isIconURL returns true if the URL looks like a small UI icon rather than
+// content image, based on common substrings in the URL path.
+func isIconURL(src string) bool {
+	srcLower := strings.ToLower(src)
+	for _, pattern := range iconPatterns {
+		if strings.Contains(srcLower, pattern) {
+			return true
+		}
+	}
+	return false
+}
 
 var publishedPosts = struct {
 	sync.RWMutex
@@ -311,18 +388,12 @@ func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.D
 		}
 
 		var feedText string
+		cleanDesc := htmlToPlainText(feedPost.Description)
 		if reNitterTelegram.MatchString(feedPost.Link) { // fix duplicated title in nitter/telegram
-			feedText = sanitizerPolicy.Sanitize(feedPost.Description)
+			feedText = cleanDesc
 		} else {
-			feedText = feedPost.Title + "\n\n" + sanitizerPolicy.Sanitize(feedPost.Description)
+			feedText = feedPost.Title + "\n\n" + cleanDesc
 		}
-		// fmt.Println(feedText)
-
-		feedText = reInlineImg.ReplaceAllString(feedText, "$1\n") // allow inline images
-
-		feedText = reInlineLink.ReplaceAllString(feedText, "$1\n") // allow inline links
-
-		feedText = html.UnescapeString(feedText) // decode html strings
 
 		if feedPost.Enclosures != nil { // allow enclosure images/links
 			for _, enclosure := range feedPost.Enclosures {
