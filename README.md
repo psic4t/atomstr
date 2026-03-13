@@ -41,6 +41,7 @@ The following variables are available:
 - `RELAYS_TO_PUBLISH_TO` to which relays this server posts to, add more comma separated. Default "wss://nostr.data.haus"
 - `DEFAULT_FEED_IMAGE` if no feed image is found, use this. Default "https://upload.wikimedia.org/wikipedia/en/thumb/4/43/Feed-icon.svg/256px-Feed-icon.svg.png"
 - `MAX_FAILURE_ATTEMPTS` maximum consecutive failures before marking feed as broken, default "3"
+- `MAX_FAILURE_DELETE` maximum consecutive failures before auto-deleting feed from database, default "100"
 - `BROKEN_FEED_RETRY_INTERVAL` how often to retry broken feeds, default "24h"
 
 ## Feed Availability Ranking
@@ -51,7 +52,7 @@ atomstr automatically tracks feed availability and ranks feeds based on their re
 - **Warning feeds** (⚠): Have some failures but still being attempted
 - **Broken feeds** (✗): Failed multiple times, only retried once per day
 
-When a feed fails to fetch, atomstr increments a failure counter. After `MAX_FAILURE_ATTEMPTS` consecutive failures, the feed is marked as "broken" and only retried every `BROKEN_FEED_RETRY_INTERVAL`. If a broken feed starts working again, it's automatically restored to active status.
+When a feed fails to fetch, atomstr increments a failure counter. After `MAX_FAILURE_ATTEMPTS` consecutive failures, the feed is marked as "broken" and only retried every `BROKEN_FEED_RETRY_INTERVAL`. If a broken feed starts working again, it's automatically restored to active status. Feeds that reach `MAX_FAILURE_DELETE` consecutive failures are automatically removed from the database.
 
 The web interface shows feed status with visual indicators, and broken feeds are displayed in gray to distinguish them from working feeds.
 

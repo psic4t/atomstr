@@ -22,6 +22,7 @@ var (
 	defaultFeedImage                  = getEnv("DEFAULT_FEED_IMAGE", "https://upload.wikimedia.org/wikipedia/en/thumb/4/43/Feed-icon.svg/256px-Feed-icon.svg.png")
 	dbPath                            = getEnv("DB_PATH", "./atomstr.db")
 	maxFailureAttempts, _             = strconv.Atoi(getEnv("MAX_FAILURE_ATTEMPTS", "3"))
+	maxFailureDelete, _               = strconv.Atoi(getEnv("MAX_FAILURE_DELETE", "100"))
 	brokenFeedRetryInterval, _        = time.ParseDuration(getEnv("BROKEN_FEED_RETRY_INTERVAL", "24h"))
 	dryRunMode                        = false
 	atomstrVersion             string = "0.9.12"

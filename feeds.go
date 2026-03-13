@@ -150,6 +150,15 @@ func processFeedURL(ch chan feedStruct, wg *sync.WaitGroup) {
 
 			// Update failure state
 			newFailureCount := feedItem.FailureCount + 1
+
+			// Auto-delete feeds that exceed the maximum failure threshold
+			if newFailureCount >= maxFailureDelete {
+				log.Printf("[WARN] Feed %s auto-deleted after %d consecutive failures", feedItem.URL, newFailureCount)
+				a.deleteSource(feedItem.URL)
+				a.db.Close()
+				continue
+			}
+
 			newState := "active"
 			if newFailureCount >= maxFailureAttempts {
 				newState = "broken"
