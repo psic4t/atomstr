@@ -139,15 +139,12 @@ func fetchFavicon(feedURL string) string {
 	return defaultFeedImage
 }
 
-func processFeedURL(ch chan feedStruct, wg *sync.WaitGroup) {
+func (a *Atomstr) processFeedURL(ch chan feedStruct, wg *sync.WaitGroup) {
 	for feedItem := range ch {
-		// Get the Atomstr instance to check state and update database
-		a := &Atomstr{db: dbInit()}
 
 		// Check if we should fetch this feed
 		if !a.shouldFetchFeed(feedItem) {
 			log.Printf("[INFO] Skipping broken feed %s (last failure: %v)", feedItem.URL, feedItem.LastFailure)
-			a.db.Close()
 			// wg.Done() # not anymore? fix negative wg counter
 			continue
 		}
@@ -168,7 +165,6 @@ func processFeedURL(ch chan feedStruct, wg *sync.WaitGroup) {
 			if newFailureCount >= maxFailureDelete {
 				log.Printf("[WARN] Feed %s auto-deleted after %d consecutive failures", feedItem.URL, newFailureCount)
 				a.deleteSource(feedItem.URL)
-				a.db.Close()
 				continue
 			}
 
@@ -207,7 +203,6 @@ func processFeedURL(ch chan feedStruct, wg *sync.WaitGroup) {
 			log.Println("[DEBUG] Finished updating feed ", feedItem.URL)
 		}
 
-		a.db.Close()
 	}
 	wg.Done()
 }
