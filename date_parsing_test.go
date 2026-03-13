@@ -68,13 +68,28 @@ func TestParseFeedDate(t *testing.T) {
 		t.Errorf("Expected parsed time %v, got: %v", expectedNLTime, parsedTime)
 	}
 
-	// Test case 5: Feed item with no date info
+	// Test case 5: Feed item with ISO8601 date with space before T (e.g. "2024-06-04 T14:00:00+09:00")
 	item5 := &gofeed.Item{
-		Title: "Test Item 5",
+		Title:     "Test Item 5",
+		Published: "2024-06-04 T14:00:00+09:00",
 	}
 
-	_, err = parseFeedDate(item5)
+	parsedTime, err = parseFeedDate(item5)
+	if err != nil {
+		t.Errorf("Expected success for item5, got error: %v", err)
+	}
+	expectedSpaceTTime := time.Date(2024, time.June, 4, 14, 0, 0, 0, time.FixedZone("", 9*60*60))
+	if !parsedTime.Equal(expectedSpaceTTime) {
+		t.Errorf("Expected parsed time %v, got: %v", expectedSpaceTTime, parsedTime)
+	}
+
+	// Test case 6: Feed item with no date info
+	item6 := &gofeed.Item{
+		Title: "Test Item 6",
+	}
+
+	_, err = parseFeedDate(item6)
 	if err == nil {
-		t.Error("Expected error for item5 with no date info")
+		t.Error("Expected error for item6 with no date info")
 	}
 }
