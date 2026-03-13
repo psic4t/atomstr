@@ -16,5 +16,5 @@
 - Conventions: Follow effective Go patterns; keep functions short
 
 ## Git Workflow
-- Conditional commits: Always run `go vet ./...`, `go build -o atomstr`, and `go test ./...` before committing. Only commit if all three pass.
-- Commit style: Short lowercase messages describing the change (see git log for examples)
+- Pre-commit checks: Always run `go vet ./...`, `go build -o atomstr`, and `go test ./...` before committing. Only commit if all three pass.
+- Commit style: Use [Conventional Commits](https://www.conventionalcommits.org/) (e.g. `fix:`, `feat:`, `refactor:`, `docs:`, `chore:`, `test:`). Keep subject line short and lowercase.
