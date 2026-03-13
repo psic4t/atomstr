@@ -127,26 +127,25 @@ func nostrPostToRelays(ev nostr.Event, relays []string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	for _, url := range relays {
-		relay, err := nostr.RelayConnect(ctx, url)
-		if err != nil {
-			log.Println("[ERROR]", url, err)
-			continue
-		}
-		err = relay.Publish(ctx, ev)
-		if err != nil {
-			log.Println("[WARN]", url, err)
-			continue
-		}
-
-		err = relay.Close()
-		if err != nil {
-			log.Println("[ERROR]", err)
-			continue
-		}
-
-		log.Printf("[INFO] Event published to %s\n", url)
+	var wg sync.WaitGroup
+	for _, relayURL := range relays {
+		wg.Add(1)
+		go func(u string) {
+			defer wg.Done()
+			relay, err := nostr.RelayConnect(ctx, u)
+			if err != nil {
+				log.Println("[ERROR]", u, err)
+				return
+			}
+			defer relay.Close()
+			if err := relay.Publish(ctx, ev); err != nil {
+				log.Println("[WARN]", u, err)
+				return
+			}
+			log.Printf("[INFO] Event published to %s\n", u)
+		}(relayURL)
 	}
+	wg.Wait()
 }
 
 func nostrPostItem(ev nostr.Event) {
@@ -159,24 +158,23 @@ func nostrPostItem(ev nostr.Event) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	for _, url := range relaysToPublishTo {
-		relay, err := nostr.RelayConnect(ctx, url)
-		if err != nil {
-			log.Println("[ERROR]", url, err)
-			continue
-		}
-		err = relay.Publish(ctx, ev)
-		if err != nil {
-			log.Println("[WARN]", url, err)
-			continue
-		}
-
-		err = relay.Close()
-		if err != nil {
-			log.Println("[ERROR]", err)
-			continue
-		}
-
-		log.Printf("[INFO] Event published to %s\n", url)
+	var wg sync.WaitGroup
+	for _, relayURL := range relaysToPublishTo {
+		wg.Add(1)
+		go func(u string) {
+			defer wg.Done()
+			relay, err := nostr.RelayConnect(ctx, u)
+			if err != nil {
+				log.Println("[ERROR]", u, err)
+				return
+			}
+			defer relay.Close()
+			if err := relay.Publish(ctx, ev); err != nil {
+				log.Println("[WARN]", u, err)
+				return
+			}
+			log.Printf("[INFO] Event published to %s\n", u)
+		}(relayURL)
 	}
+	wg.Wait()
 }
