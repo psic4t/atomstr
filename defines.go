@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/mmcdole/gofeed"
@@ -17,8 +16,9 @@ var (
 	webserverPort                     = getEnv("WEBSERVER_PORT", "8061")
 	nip05Domain                       = getEnv("NIP05_DOMAIN", "atomstr.data.haus")
 	maxWorkers, _                     = strconv.Atoi(getEnv("MAX_WORKERS", "5"))
-	r                                 = getEnv("RELAYS_TO_PUBLISH_TO", "wss://nostr.data.haus")
-	relaysToPublishTo                 = strings.Split(r, ", ")
+	relaysToPublishTo                 = splitAndTrim(getEnv("RELAYS_TO_PUBLISH_TO", "wss://nostr.data.haus"))
+	discoveryRelays                   = splitAndTrim(getEnv("ATOMSTR_DISCOVERY_RELAYS", "wss://nostr.data.haus,wss://relay.damus.io,wss://nos.lol,wss://relay.primal.net,wss://purplepag.es,wss://user.kindpag.es,wss://profiles.nostr1.com,wss://directory.yabu.me"))
+	blasterRelays                     = splitAndTrim(getEnv("ATOMSTR_BLASTER_RELAYS", "wss://sendit.nosflare.com"))
 	defaultFeedImage                  = getEnv("DEFAULT_FEED_IMAGE", "https://upload.wikimedia.org/wikipedia/en/thumb/4/43/Feed-icon.svg/256px-Feed-icon.svg.png")
 	dbPath                            = getEnv("DB_PATH", "./atomstr.db")
 	maxFailureAttempts, _             = strconv.Atoi(getEnv("MAX_FAILURE_ATTEMPTS", "3"))
