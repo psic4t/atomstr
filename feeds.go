@@ -208,24 +208,12 @@ func (a *Atomstr) processFeedURL(ch chan feedStruct, wg *sync.WaitGroup) {
 }
 
 func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.Duration) {
-	// Debug PublishedParsed
-	log.Printf("[DEBUG] Feed: %s, Title: %s", feedItem.URL, feedPost.Title)
-	log.Printf("[DEBUG] PublishedParsed: %v", feedPost.PublishedParsed)
-	log.Printf("[DEBUG] Published: %s", feedPost.Published)
-	log.Printf("[DEBUG] UpdatedParsed: %v", feedPost.UpdatedParsed)
-	log.Printf("[DEBUG] Updated: %s", feedPost.Updated)
-
 	// Parse date with fallbacks
 	itemTime, err := parseFeedDate(feedPost)
 	if err != nil {
 		log.Printf("[WARN] Can't parse any date from post from %s: %v", feedItem.URL, err)
 		return
 	}
-
-	log.Printf("[DEBUG] Parsed itemTime: %v", itemTime)
-	log.Printf("[DEBUG] Current time: %v", time.Now().UTC())
-	log.Printf("[DEBUG] Interval: %v", interval)
-	log.Printf("[DEBUG] checkMaxAge result: %v", checkMaxAge(itemTime, interval))
 
 	// if time right, then push
 	if checkMaxAge(itemTime, interval) {
