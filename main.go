@@ -24,6 +24,10 @@ func (a *Atomstr) startWorkers(work string) error {
 
 	log.Println("[INFO] Start", work)
 
+	if work == "scrape" {
+		prunePublishedPosts(1 * time.Hour)
+	}
+
 	ch := make(chan feedStruct)
 	wg := sync.WaitGroup{}
 

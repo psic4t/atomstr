@@ -32,6 +32,37 @@ var (
 	reInlineLink     = regexp.MustCompile(`<a.href="(https.*?)" .*</a>`)
 )
 
+var publishedPosts = struct {
+	sync.RWMutex
+	items map[string]time.Time
+}{items: make(map[string]time.Time)}
+
+func isPostPublished(feedURL, postID string) bool {
+	key := feedURL + "|" + postID
+	publishedPosts.RLock()
+	_, exists := publishedPosts.items[key]
+	publishedPosts.RUnlock()
+	return exists
+}
+
+func markPostPublished(feedURL, postID string) {
+	key := feedURL + "|" + postID
+	publishedPosts.Lock()
+	publishedPosts.items[key] = time.Now()
+	publishedPosts.Unlock()
+}
+
+func prunePublishedPosts(maxAge time.Duration) {
+	publishedPosts.Lock()
+	defer publishedPosts.Unlock()
+	cutoff := time.Now().Add(-maxAge)
+	for k, t := range publishedPosts.items {
+		if t.Before(cutoff) {
+			delete(publishedPosts.items, k)
+		}
+	}
+}
+
 func (a *Atomstr) dbGetAllFeeds() (*[]feedStruct, error) {
 	sqlStatement := `SELECT pub, sec, url, state, failure_count, last_success, last_failure, etag, last_modified FROM feeds`
 	rows, err := a.db.Query(sqlStatement)
@@ -264,6 +295,16 @@ func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.D
 
 	// if time right, then push
 	if checkMaxAge(itemTime, interval) {
+		// Dedup: use GUID if available, fall back to Link
+		postID := feedPost.GUID
+		if postID == "" {
+			postID = feedPost.Link
+		}
+		if postID != "" && isPostPublished(feedItem.URL, postID) {
+			log.Printf("[DEBUG] Skipping duplicate post %s from %s", postID, feedItem.URL)
+			return
+		}
+
 		var feedText string
 		if reNitterTelegram.MatchString(feedPost.Link) { // fix duplicated title in nitter/telegram
 			feedText = sanitizerPolicy.Sanitize(feedPost.Description)
@@ -309,6 +350,10 @@ func processFeedPost(feedItem feedStruct, feedPost *gofeed.Item, interval time.D
 		ev.Sign(feedItem.Sec)
 
 		nostrPostItem(ev)
+
+		if postID != "" {
+			markPostPublished(feedItem.URL, postID)
+		}
 	}
 }
 
